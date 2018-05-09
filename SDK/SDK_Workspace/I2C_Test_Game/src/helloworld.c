@@ -140,6 +140,7 @@ state_t detect_keypress() {
 	}else {
 		state = IDLE;
 	}
+
 	if(p_state != state){
 		return state;
 	}
