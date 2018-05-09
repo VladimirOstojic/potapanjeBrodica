@@ -32,6 +32,7 @@
  */
 
 #include <stdio.h>
+#include <stdbool.h>
 #include "platform.h"
 #include "vga_periph_mem.h"
 #include "xparameters.h"
@@ -66,6 +67,7 @@ typedef u8 AddressType;
 #define LEFT   0b00001000
 #define RIGHT  0b00000010
 #define CENTER 0b00000100
+#define START_POSITION 1554
 
 /************************** Function Prototypes ******************************/
 
@@ -94,6 +96,15 @@ volatile struct {
 	int SendBytesUpdated;
 } HandlerInfo;
 
+typedef enum {
+	IDLE,
+	LEFT_PRESSED,
+	RIGHT_PRESSED,
+	CENTER_PRESSED,
+	DOWN_PRESSED,
+	UP_PRESSED
+} state_t;
+
 // 1450 prva + offset 104
 void print_matrix(int cursorPos, char c[]) {
 
@@ -111,8 +122,93 @@ void print_matrix(int cursorPos, char c[]) {
 		}
 	}
 }
+// ------------------------------ BLAGE IZMENE -------------------------------------
+state_t detect_keypress() {
+	state_t p_state = IDLE;
+	state_t state = IDLE;
+	int button = Xil_In32LE(XPAR_MY_PERIPHERAL_0_BASEADDR);
+	if ((button & UP) == 0) {
+		state = UP_PRESSED;
+	}else if ((button & DOWN) == 0) {
+		state = DOWN_PRESSED;
+	}else if ((button & RIGHT) == 0) {
+		state = RIGHT_PRESSED;
+	}else if ((button & LEFT) == 0) {
+		state = LEFT_PRESSED;
+	}else if ((button & CENTER) == 0) {
+		state = CENTER_PRESSED;
+	}else {
+		state = IDLE;
+	}
+	if(p_state != state){
+		return state;
+	}
+}
+// ---------------------------------------------------------------------------------
+
+// ------------------------------DODATO---------------------------------------------
+int get_cursor_from_mem(int mem_location) {
+    int cursor_x, cursor_y;
+    cursor_y=mem_location/10;
+    cursor_x=mem_location%10;
+    return BASE_ADDRESS + cursor_x*4+cursor_y*160;
+}
+
+int get_mem_loc_from_cursor(int cursor_pos) {
+    int mem_location, mem_x, mem_y;
+    cursor_pos-=BASE_ADDRESS;
+    mem_y=cursor_pos/160;
+    mem_x=cursor_pos%40;
+    return mem_y*10 + mem_x;
+}
+// ---------------------------------------------------------------------------------
 
 
+// ---------------------------OBAVLJENE VECE PROMENE -------------------------------
+int move_cursor(int cursor_temp_position) {
+	state_t key_pressed = detect_keypress();
+    bool right_edge, left_edge, up_edge, down_edge;
+    
+    int mem_pos = get_mem_loc_from_cursor(cursor_temp_position);
+    if (mem_pos%10==0) left_edge=true;
+    else left_edge=false;
+
+    if (mem_pos%10==9) right_edge=true;
+    else right_edge=false;
+
+    if (mem_pos>=90) down_edge=true;
+    else down_edge=false;
+
+    if (mem_pos<=9) up_edge=true;
+    else up_edge=false;
+
+	switch(key_pressed){
+				case UP_PRESSED :
+			        if (up_edge) mem_pos=mem_pos;
+			        else mem_pos-=10;
+			        break;
+				case LEFT_PRESSED :
+					if (left_edge) mem_pos=mem_pos;
+			        else mem_pos-=1;
+					break;
+				case RIGHT_PRESSED :
+			        if (right_edge) mem_pos=mem_pos;
+				    else mem_pos+=1;
+					break;
+				case DOWN_PRESSED :
+			        if (down_edge) mem_pos=mem_pos;
+    			    else mem_pos+=10;
+    			    break;
+				case CENTER_PRESSED :
+					break;
+					mem_pos=900
+				case IDLE:
+					break;
+			}
+	return mem_pos;
+}
+
+// ----------------------------------------------------------------------------
 XIic IicInstance;		/* The instance of the IIC device. */
 XIntc InterruptController;	/* The instance of the Interrupt Controller */
 
@@ -128,14 +224,7 @@ volatile u8 BusNotBusy;
 int main()
 {
 
-	typedef enum {
-		IDLE,
-		LEFT_PRESSED,
-		RIGHT_PRESSED,
-		CENTER_PRESSED,
-		DOWN_PRESSED,
-		UP_PRESSED
-	} state_t;
+
 
 	unsigned char string_s[] = "POTAPANJE BRODICA\n";
 	unsigned char string_odabrali[] = "ODABRALI STE SIMBOL";
@@ -155,7 +244,8 @@ int main()
 	int i;
 	int j;
 	u8 simbol;
-
+	int set_cursor_here = START_POSITION;
+	int backup_cursor_position;
 	Status =  initIICMaster(IIC_DEVICE_ID, SLAVE_ADDRESS);
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
@@ -196,11 +286,11 @@ int main()
 
 		char map1[100];
 		int i;
-		for (i=0; i<100; i++) {
-			if (i==1 || i==2 || i==15 || i==16 ||i==17 || i==18 ||i==30 || i==34 ||i==64 || i==65 ||i==66 || i==69 ||i==70 || i==71 ||i==86 || i==87 ||i==88 || i==93 ||i==100) {
+		for (i=1; i<=100; i++) {
+			if (i==1 || i==2 || i==15 || i==16 ||i==17 || i==18 ||i==30 || i==34 || i == 35 ||i==64 || i==65 ||i==66 || i==69 ||i==70 || i==71 ||i==86 || i==87 ||i==88 || i==93 ||i==100) {
 				map1[i-1]='1';
 			} else {
-				map1[i]='0';
+				map1[i-1]='0';
 			}
 		}
 
@@ -217,9 +307,17 @@ int main()
 			'0','0','0','1','0',  '0','0','0','0','0',
 			'1','1','0','0','0',  '0','0','1','1','0'
 		};
-
-		print_matrix(1450, map1);
-		print_matrix(1554, map2);
+		int m;
+		int k;
+		for (m=0; m<20; m++) {
+			set_cursor(1450+160);
+			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, ' ');
+			for (i=0; i<100000; i++) {}
+			print_matrix(1450, map1);
+			int i;
+			for (i=0; i<100000; i++) {}
+		}
+			print_matrix(1554, map2);
 
 		set_cursor(1454+160-4);
 		//print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'G');
@@ -232,34 +330,23 @@ int main()
 
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
 
-		while(1){
-			button = Xil_In32LE(XPAR_MY_PERIPHERAL_0_BASEADDR);
-
-			if ((button & UP) == 0) {
-				state = UP_PRESSED;
-			}else if ((button & DOWN) == 0) {
-				state = DOWN_PRESSED;
-			}else if ((button & RIGHT) == 0) {
-				state = RIGHT_PRESSED;
-			}else if ((button & LEFT) == 0) {
-				state = LEFT_PRESSED;
-			}else if ((button & CENTER) == 0) {
-				state = CENTER_PRESSED;
-			}else {
-				state = IDLE;
-			}
-
-			if(p_state != state){
-				break;
-			}
+// ------------------------------- TREBA TESTIRATI ------------------------------------
+		bool choosing = true
+		while(choosing){
+			cursor_temp_position=set_cursor_here;
+			set_cursor_here=move_cursor(set_cursor_here);
+			if (set_cursor_here==9999) choosing=false;
+			else set_cursor(get_cursor_from_mem(set_cursor_here));
 		}
 
+// ------------------------------------------------------------------------------------
+		// cursor_temp_position sadrzi memorijsku lokaciju odabranog elementa
 		clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 		set_cursor(368);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_odabrali, 19);
 		set_cursor(4228);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
-
+/*
 		switch(state){
 			case UP_PRESSED :
 				set_cursor(1030);
@@ -283,7 +370,7 @@ int main()
 			case IDLE:
 				break;
 		}
-
+*/
 		sendToSlave(simbol);
 
 		for(i = 0; i < 100000; i++){
