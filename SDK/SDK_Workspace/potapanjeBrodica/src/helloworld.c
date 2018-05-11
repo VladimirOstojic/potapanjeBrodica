@@ -125,96 +125,64 @@ void print_matrix(int cursorPos, char c[]) {
 }
 // ------------------------------ BLAGE IZMENE -------------------------------------
 state_t detect_keypress() {
-	state_t p_state = IDLE;
 	state_t state = IDLE;
 	int button = Xil_In32LE(XPAR_MY_PERIPHERAL_0_BASEADDR);
 	if ((button & UP) == 0) {
 		state = UP_PRESSED;
-	}else if ((button & DOWN) == 0) {
+	} else if ((button & DOWN) == 0) {
 		state = DOWN_PRESSED;
-	}else if ((button & RIGHT) == 0) {
+	} else if ((button & RIGHT) == 0) {
 		state = RIGHT_PRESSED;
-	}else if ((button & LEFT) == 0) {
+	} else if ((button & LEFT) == 0) {
 		state = LEFT_PRESSED;
-	}else if ((button & CENTER) == 0) {
+	} else if ((button & CENTER) == 0) {
 		state = CENTER_PRESSED;
-	}else {
+	} else {
 		state = IDLE;
 	}
-	//TODO
-	//if je visak, povratna vrednost mora biti definisana
-	if(p_state != state){
-		return state;
-	}
+	
+	return state;
 }
 // ---------------------------------------------------------------------------------
 
 // ------------------------------DODATO---------------------------------------------
 int get_cursor_from_mem(int mem_location) {
     int cursor_x, cursor_y;
-    cursor_y=mem_location/10;
-    cursor_x=mem_location%10;
-    return START_POSITION + cursor_x*4+cursor_y*160;
+    cursor_y = mem_location/10;
+    cursor_x = mem_location%10;
+    return START_POSITION + cursor_x*4 + cursor_y*160;
 }
 
 int get_mem_loc_from_cursor(int cursor_pos) {
     int mem_location, mem_x, mem_y;
-    cursor_pos-=START_POSITION;
-    mem_y=cursor_pos/160;
-    mem_x=cursor_pos%40;
+    cursor_pos -= START_POSITION;
+    mem_y = cursor_pos/160;
+    mem_x = cursor_pos%40/4;
     return mem_y*10 + mem_x;
 }
 // ---------------------------------------------------------------------------------
 
 
 // ---------------------------OBAVLJENE VECE PROMENE -------------------------------
-int move_cursor(int cursor_temp_position) {
-	// TODO razmotriti pozivanje funkcije unutar funkcije
-	
-	state_t key_pressed = detect_keypress();
-	//while ()
-
+int move_cursor(int cursor, state_t key_pressed) {
     bool right_edge, left_edge, up_edge, down_edge;
-    
-    int mem_pos = get_mem_loc_from_cursor(cursor_temp_position);
-    if (mem_pos%10==0) left_edge=true;
-    else left_edge=false;
+	
+	left_edge = (get_mem_loc_from_cursor(cursor)%10==0) ? true : false;
+    right_edge = (get_mem_loc_from_cursor(cursor)%10==9) ? true : false;
+    down_edge = (get_mem_loc_from_cursor(cursor)>=90) ? true : false;
+    up_edge = (get_mem_loc_from_cursor(cursor)<=9) ? true : false;
 
-    if (mem_pos%10==9) right_edge=true;
-    else right_edge=false;
-
-    if (mem_pos>=90) down_edge=true;
-    else down_edge=false;
-
-    if (mem_pos<=9) up_edge=true;
-    else up_edge=false;
-
-	switch(key_pressed){
-				case UP_PRESSED :
-			        if (up_edge) mem_pos=mem_pos;
-			        else mem_pos-=10;
-			        break;
-				case LEFT_PRESSED :
-					if (left_edge) mem_pos=mem_pos;
-			        else mem_pos-=1;
-					break;
-				case RIGHT_PRESSED :
-			        if (right_edge) mem_pos=mem_pos;
-				    else mem_pos+=1;
-					break;
-				case DOWN_PRESSED :
-			        if (down_edge) mem_pos=mem_pos;
-    			    else mem_pos+=10;
-    			    break;
-				case CENTER_PRESSED :
-					break;
-					mem_pos=-1;
-				case IDLE:
-					break;
-			}
-	// TODO razmisliti da li da vrati memoriju ili kursor
-	// return get_cursor_from_mem(mem_pos);
-	return mem_pos;
+    if (key_pressed==LEFT)
+        cursor = (left_edge) ? cursor : cursor-4;
+    else if (key_pressed==RIGHT)
+        cursor = (right_edge) ? cursor : cursor+4;
+    else if (key_pressed==UP)
+        cursor = (up_edge) ? cursor : cursor-160;
+    else if (key_pressed==DOWN)
+        cursor = (down_edge) ? cursor : cursor+160;
+    else if (key_pressed==SELECT)
+        cursor=cursor;
+    return cursor;
 }
 
 // ----------------------------------------------------------------------------
