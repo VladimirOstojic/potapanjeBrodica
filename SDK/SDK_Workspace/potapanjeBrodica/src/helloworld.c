@@ -141,6 +141,8 @@ state_t detect_keypress() {
 	}else {
 		state = IDLE;
 	}
+	//TODO
+	//if je visak, povratna vrednost mora biti definisana
 	if(p_state != state){
 		return state;
 	}
@@ -167,6 +169,8 @@ int get_mem_loc_from_cursor(int cursor_pos) {
 
 // ---------------------------OBAVLJENE VECE PROMENE -------------------------------
 int move_cursor(int cursor_temp_position) {
+	// TODO razmotriti pozivanje funkcije unutar funkcije
+	
 	state_t key_pressed = detect_keypress();
 	//while ()
 
@@ -208,6 +212,8 @@ int move_cursor(int cursor_temp_position) {
 				case IDLE:
 					break;
 			}
+	// TODO razmisliti da li da vrati memoriju ili kursor
+	// return get_cursor_from_mem(mem_pos);
 	return mem_pos;
 }
 
@@ -342,7 +348,9 @@ int main()
 		bool choosing = true;
 		int frame_cnt = 0;
 		char whitespace='A';
-/*		while(choosing){
+		// TODO while (kraj_igre) -> while (na_potezu) 
+/*		while(choosing){ // while choosing treba izmeniti tako da proverava detect_keypress()!=CENTER
+		
 			frame_cnt++;
 			backup_cursor_position=set_cursor_here;
 
@@ -361,8 +369,10 @@ int main()
 			}
 		}
 */
-
-		while (choosing) {
+		// TODO na izlasku iz while(detect_keypress!=CENTER) treba odraditi bombardovanje 
+		// provera sta se nalazi - nije programerska logika, nego sama logika igrice...
+		// while (kraj_igre) -> while (na_potezu) 
+		while (choosing) { // while choosing treba izmeniti tako da proverava detect_keypress()!=CENTER
 			frame_cnt++;
 			set_cursor(get_cursor_from_mem(2));
 			if (frame_cnt%10<5) print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'A');
