@@ -39,7 +39,7 @@
 #include "xiic.h"
 #include "xintc.h"
 #include "xil_exception.h"
-
+#include "maps.h"
 /*
  * The following constants map to the XPAR parameters created in the
  * xparameters.h file. They are defined here such that a user can easily
@@ -67,8 +67,8 @@ typedef u8 AddressType;
 #define LEFT   0b00001000
 #define RIGHT  0b00000010
 #define CENTER 0b00000100
-#define START_POSITION 1554+160
-
+#define START_POSITION 1540
+#define START_POSITION_LEFT 1460
 /************************** Function Prototypes ******************************/
 
 int initIICMaster(u16 IicDeviceId, u8 slaveAddress);
@@ -111,7 +111,7 @@ void print_matrix(int cursorPos, char c[]) {
 
 	int i=0;
 	for (i=0; i<100; i++) {
-		if (4*(i%10)==0) {
+		if ((4*(i%10)==0) && (i!=0)) {
 			cursorPos+=160;
 			set_cursor(cursorPos+4*(i%10));
 			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, c[i]);
@@ -154,7 +154,7 @@ int get_cursor_from_mem(int mem_location) {
 }
 
 int get_mem_loc_from_cursor(int cursor_pos) {
-    int mem_location, mem_x, mem_y;
+    int mem_x, mem_y;
     cursor_pos -= START_POSITION;
     mem_y = cursor_pos/160;
     mem_x = cursor_pos%40/4;
@@ -167,22 +167,25 @@ int get_mem_loc_from_cursor(int cursor_pos) {
 int move_cursor(int cursor, state_t key_pressed) {
     bool right_edge, left_edge, up_edge, down_edge;
 	
-	left_edge = (get_mem_loc_from_cursor(cursor)%10==0) ? true : false;
-    right_edge = (get_mem_loc_from_cursor(cursor)%10==9) ? true : false;
-    down_edge = (get_mem_loc_from_cursor(cursor)>=90) ? true : false;
-    up_edge = (get_mem_loc_from_cursor(cursor)<=9) ? true : false;
+    int pos = get_mem_loc_from_cursor(cursor);
 
-    if (key_pressed==LEFT)
-        cursor = (left_edge) ? cursor : cursor-4;
-    else if (key_pressed==RIGHT)
-        cursor = (right_edge) ? cursor : cursor+4;
-    else if (key_pressed==UP)
-        cursor = (up_edge) ? cursor : cursor-160;
-    else if (key_pressed==DOWN)
-        cursor = (down_edge) ? cursor : cursor+160;
-    else if (key_pressed==SELECT)
-        cursor=cursor;
-    return cursor;
+	left_edge = (pos%10==0) ? true : false;
+    right_edge = (pos%10==9) ? true : false;
+    down_edge = (pos>=90) ? true : false;
+    up_edge = (pos<=9) ? true : false;
+
+    if (key_pressed==LEFT_PRESSED)
+        pos = (left_edge) ? pos : pos-1;
+    else if (key_pressed==RIGHT_PRESSED)
+        pos = (right_edge) ? pos : pos+1;
+    else if (key_pressed==UP_PRESSED)
+        pos = (up_edge) ? pos : pos-10;
+    else if (key_pressed==DOWN_PRESSED)
+        pos = (down_edge) ? pos : pos+10;
+    else if (key_pressed==CENTER_PRESSED)
+        pos=pos;
+
+    return get_cursor_from_mem(pos);
 }
 
 // ----------------------------------------------------------------------------
@@ -201,37 +204,26 @@ volatile u8 BusNotBusy;
 int main()
 {
 
-
-
+	int completed_ships = 0;
 	unsigned char string_s[] = "POTAPANJE BRODICA\n";
-	unsigned char string_odabrali[] = "ODABRALI STE SIMBOL";
 	unsigned char string_igrac[] = "IGRAC 1";
-	unsigned char string_kamen[] = "KAMEN";
-	unsigned char string_makaze[] = "MAKAZE";
-	unsigned char string_papir[] = "PAPIR";
 	u8 winner;
 
 	init_platform();
 	int Status;
 	u8 slavePtr[2];
-	state_t p_state = IDLE;
-	state_t state = IDLE;
-	int button;
 	u8 slaveSym;
 	int i;
 	int j;
 	u8 simbol;
 
 	int set_cursor_here = START_POSITION;
-	int backup_cursor_position;
 	Status =  initIICMaster(IIC_DEVICE_ID, SLAVE_ADDRESS);
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
 	}
 
 	while(1){
-		state = IDLE;
-		p_state = IDLE;
 
 		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x00, 0x0);// direct mode   0
 		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x04, 0x3);// display_mode  1
@@ -245,115 +237,97 @@ int main()
 		clear_graphics_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 
 // 		Stampanje pocetnih matrica nula
-		char c[100];
-		memset(c, '0', 100);
 
-		char map0[100] =
-		{
-			'0','0','0','0','0',  '0','0','0','0','0',
-			'0','0','0','0','0',  '0','0','0','0','0',
-			'0','0','0','0','0',  '0','0','0','0','0',
-			'0','0','0','0','0',  '0','0','0','0','0',
-			'0','0','0','0','0',  '0','0','0','0','0',
-			'0','0','0','0','0',  '0','0','0','0','0',
-			'0','0','0','0','0',  '0','0','0','0','0',
-			'0','0','0','0','0',  '0','0','0','0','0',
-			'0','0','0','0','0',  '0','0','0','0','0',
-			'0','0','0','0','0',  '0','0','0','0','0'
-		};
+		char* mapa = map();
 
-		char map1[100];
-		int i;
-		for (i=1; i<=100; i++) {
-			if (i==1 || i==2 || i==15 || i==16 ||i==17 || i==18 ||i==30 || i==34 || i == 35 ||i==64 || i==65 ||i==66 || i==69 ||i==70 || i==71 ||i==86 || i==87 ||i==88 || i==93 ||i==100) {
-				map1[i-1]='1';
-			} else {
-				map1[i-1]='0';
-			}
-		}
-
-		char map2[100] =
-		{
-			'0','0','0','0','1',  '0','1','1','0','1',
-			'0','1','0','0','0',  '0','0','0','0','0',
-			'0','1','0','0','0',  '1','1','1','1','0',
-			'0','1','0','0','0',  '0','0','0','0','0',
-			'0','0','0','0','0',  '0','0','1','1','1',
-			'0','0','0','0','0',  '0','0','0','0','0',
-			'0','0','0','0','1',  '0','0','0','0','0',
-			'0','0','0','0','0',  '0','0','0','0','0',
-			'0','0','0','1','0',  '0','0','0','0','0',
-			'1','1','0','0','0',  '0','0','1','1','0'
-		};
-		int m;
-		int k;
-	/*	for (m=0; m<20; m++) {
-			set_cursor(1450+160);
-			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, ' ');
-			for (i=0; i<100000; i++) {}
-			print_matrix(1450, map1);
-			int i;
-			for (i=0; i<100000; i++) {}
-		}
-	*/		print_matrix(1554, map2);
-
-		set_cursor(1454+160-4);
-		//print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'G');
-
-
+		//TODO maskiranje
+		//sendToSlave()
 		set_cursor(368);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s, 17);
 
 		set_cursor(4228);
 
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
-		set_cursor(get_cursor_from_mem(2));
-		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'M');
-		set_cursor(get_mem_loc_from_cursor(1718));
-		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'N');
 
 // ------------------------------- TREBA TESTIRATI ------------------------------------
-		bool choosing = true;
 		int frame_cnt = 0;
-		char whitespace='A';
-		// TODO while (kraj_igre) -> while (na_potezu) 
-/*		while(choosing){ // while choosing treba izmeniti tako da proverava detect_keypress()!=CENTER
-		
-			frame_cnt++;
-			backup_cursor_position=set_cursor_here;
+		char whitespace=' ';
 
-			set_cursor_here=move_cursor(set_cursor_here);
-			set_cursor_here=get_cursor_from_mem(set_cursor_here);
+		print_matrix(START_POSITION_LEFT, mapa);
 
-			if (set_cursor_here==-1) {
-				int b=1;//choosing=false;
-			}
-			else{
-				set_cursor(get_cursor_from_mem(set_cursor_here));
-				if(frame_cnt%10<5)
-					print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,whitespace);
-				else
-					print_matrix(START_POSITION, map2);
-			}
-		}
-*/
-		// TODO na izlasku iz while(detect_keypress!=CENTER) treba odraditi bombardovanje 
+		print_matrix(START_POSITION, mask);
+
 		// provera sta se nalazi - nije programerska logika, nego sama logika igrice...
-		// while (kraj_igre) -> while (na_potezu) 
-		while (choosing) { // while choosing treba izmeniti tako da proverava detect_keypress()!=CENTER
-			frame_cnt++;
-			set_cursor(get_cursor_from_mem(2));
-			if (frame_cnt%10<5) print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'A');
-			else print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'Z');
-			if (move_cursor(get_cursor_from_mem(2))==-1) {
-				choosing=false;
-				set_cursor(24);
-				print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'T');
+		// while (kraj_igre) -> while (na_potezu),potez se zavrsava ako se ne pogodi brodic,a ponavvlja se ako se pogodi brodic
+		// TODO funkcija pretrazivanja brodica
+		// TODO ne mora da se salje cela matrica, dovoljno nam je da posaljemo memorijsku lokaciju elementa na koji je suparnik kliknuo
+
+		while (completed_ships<20) {
+			bool potez=true;
+			while(potez) {
+				state_t key = IDLE;
+				while (key!=CENTER_PRESSED) {
+					key=detect_keypress();
+					int j=0;
+					for (j=0; j<1000000; j++) {}
+					frame_cnt++;
+					set_cursor_here = move_cursor(set_cursor_here, key);
+					set_cursor(set_cursor_here);
+					if (frame_cnt%6<3) {
+						print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, whitespace);
+					}
+					else {
+						print_matrix(START_POSITION, mask);
+					}
+				}
+
+				int x = get_mem_loc_from_cursor(set_cursor_here);
+				if (mapa[x]=='0') {
+					mask[x]='O';
+					mapa[x]='O';
+					potez=false;
+				}
+				else if (mapa[x]=='1') {
+					mask[x]='X';
+					mapa[x]='X';
+					//sendToSlave()
+					++completed_ships;
+					if (completed_ships==20) break;
+					set_cursor(161);
+				}
+
+				print_matrix(START_POSITION, mask);
+			}
+
+			// sendToSlave(simbol);
+		}
+
+		set_cursor(550);
+		clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
+
+		for(i = 0; i < 10; i++) {
+			if(i % 2 == 0) {
+				print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "WIN", 3);
+				VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0x0000FF);// foreground 4
+				VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0xFFFFFF);// background color 5
+				for(j = -2500000; j < 2500000; j++);
+			}
+			else {
+				print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "WIN", 3);
+				VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0xFFFFFF);// foreground 4
+				VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0x0000FF);// background color 5
+				for(j = -2500000; j < 2500000; j++);
 			}
 		}
+
+
+
+
+
+
 // ------------------------------------------------------------------------------------
 		// cursor_temp_position sadrzi memorijsku lokaciju odabranog elementa
-		clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
+	/*	clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 		set_cursor(368);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_odabrali, 19);
 		set_cursor(4228);
@@ -383,7 +357,8 @@ int main()
 				break;
 		}
 */
-		sendToSlave(simbol);
+
+
 
 		for(i = 0; i < 100000; i++){
 
