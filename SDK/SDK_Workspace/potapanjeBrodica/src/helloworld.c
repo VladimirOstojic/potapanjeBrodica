@@ -188,6 +188,156 @@ int move_cursor(int cursor, state_t key_pressed) {
     return get_cursor_from_mem(pos);
 }
 
+void remove_edges(char* m, int p) {
+    bool horizontal, vertical, single;
+    bool right_edge, left_edge, up_edge, down_edge;
+    int upper, down, left, right;
+
+    int ship_size=1;
+
+    bool left_up, left_down, right_down, right_up;
+
+    left_edge = (p%10==0) ? true : false;
+    right_edge = (p%10==9) ? true : false;
+    down_edge = (p>90) ? true : false;
+    up_edge = (p<=9) ? true : false;
+
+    left_up = left_edge && up_edge;
+    left_down = left_edge && down_edge;
+    right_down = right_edge && down_edge;
+    right_up = right_edge && up_edge;
+
+
+    if (up_edge) {
+        vertical = (m[p]=='1' && (m[p+10]=='1')) ? true : false;
+    } else if (down_edge) {
+        vertical = (m[p]=='1' && (m[p-10]=='1')) ? true : false;
+    } else if (!(up_edge || down_edge)){
+        vertical = (m[p]=='1' && (m[p+10]=='1' || m[p-10]=='1')) ? true : false;
+    }
+
+    if (left_edge) {
+        horizontal = (m[p]=='1' && (m[p+1]=='1')) ? true : false;
+    } else if (right_edge) {
+        horizontal = (m[p]=='1' && (m[p-1]=='1')) ? true : false;
+    } else if (!(left_edge || right_edge)) {
+        horizontal = (m[p]=='1' && (m[p+1]=='1' || m[p-1]=='1')) ? true : false;
+    }
+
+    single = (!horizontal) && (!vertical);
+
+    int temp = p;
+    if (horizontal) {
+        if (!right_edge) {
+            while (m[temp]=='1') {
+                right=temp;
+                temp+=1;
+            }
+        }
+        else {
+            right=temp;
+        }
+        temp=p;
+        if (!left_edge) {
+            while (m[temp]=='1') {
+                left=temp;
+                temp-=1;
+            }
+        }
+        else {
+            left=temp;
+        }
+    }
+
+    temp = p;
+    if (vertical) {
+        if (!down_edge) {
+            while (m[temp]=='1') {
+                upper=temp;
+                temp-=10;
+            }
+        }
+        else {
+            down=temp;
+        }
+
+        temp=p;
+        if (!up_edge) {
+            while (m[temp]=='1') {
+                down=temp;
+                temp+=10;
+            }
+        }
+        else {
+            upper=temp;
+        }
+    }
+
+    temp=p;
+    if (single && m[p]=='1') {
+        if (!up_edge && !left_edge && !right_edge && !down_edge) {
+            m[p-11]='*';
+            m[p-10]='*';
+            m[p-9]='*';
+            m[p-1]='*';
+            m[p+1]='*';
+            m[p+9]='*';
+            m[p+10]='*';
+            m[p+11]='*';
+        }
+        if (left_up) {
+            m[p+1]='*';
+            m[p+10]='*';
+            m[p+11]='*';
+        }
+        if (right_up) {
+            m[p-1]='*';
+            m[p+10]='*';
+            m[p+9]='*';
+        }
+        if (left_down) {
+            m[p-10]='*';
+            m[p-9]='*';
+            m[p+1]='*';
+        }
+        if (right_down) {
+            m[p-11]='*';
+            m[p-10]='*';
+            m[p-1]='*';
+        }
+        if (left_edge && !up_edge && !down_edge) {
+            m[p+1]='*';
+            m[p+10]='*';
+            m[p+11]='*';
+            m[p-10]='*';
+            m[p-9]='*';
+        }
+        if (right_edge && !up_edge && !down_edge) {
+            m[p-1]='*';
+            m[p+10]='*';
+            m[p+9]='*';
+            m[p-11]='*';
+            m[p-10]='*';
+        }
+        if (up_edge && !right_edge && !left_edge) {
+            m[p+1]='*';
+            m[p+10]='*';
+            m[p+11]='*';
+            m[p-1]='*';
+            m[p+9]='*';
+        }
+        if (down_edge && !left_edge && !right_edge) {
+            m[p+1]='*';
+            m[p-1]='*';
+            m[p-9]='*';
+            m[p-11]='*';
+            m[p-10]='*';
+        }
+    }
+
+    print_matrix(START_POSITION, m);
+
+}
 // ----------------------------------------------------------------------------
 XIic IicInstance;		/* The instance of the IIC device. */
 XIntc InterruptController;	/* The instance of the Interrupt Controller */
@@ -290,6 +440,7 @@ int main()
 				else if (mapa[x]=='1') {
 					mask[x]='X';
 					mapa[x]='X';
+					remove_edges(mapa, x);
 					//sendToSlave()
 					++completed_ships;
 					if (completed_ships==20) break;
