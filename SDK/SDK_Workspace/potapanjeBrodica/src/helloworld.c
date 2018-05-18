@@ -188,7 +188,16 @@ int move_cursor(int cursor, state_t key_pressed) {
     return get_cursor_from_mem(pos);
 }
 
-void remove_edges(char* m, int p) {
+void remove_edges(char* mask, char* map, int p) {
+
+	set_cursor(165);
+
+	int x = 0;
+	for (x=0; x<100; x++) {
+		if (p==x) print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, p);
+	}
+//    p==0 ? print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'Q') : print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'W');
+
     bool horizontal, vertical, single;
     bool right_edge, left_edge, up_edge, down_edge;
     int upper, down, left, right;
@@ -209,19 +218,19 @@ void remove_edges(char* m, int p) {
 
 
     if (up_edge) {
-        vertical = (m[p]=='1' && (m[p+10]=='1')) ? true : false;
+        vertical = (map[p]=='1' && (map[p+10]=='1')) ? true : false;
     } else if (down_edge) {
-        vertical = (m[p]=='1' && (m[p-10]=='1')) ? true : false;
+        vertical = (map[p]=='1' && (map[p-10]=='1')) ? true : false;
     } else if (!(up_edge || down_edge)){
-        vertical = (m[p]=='1' && (m[p+10]=='1' || m[p-10]=='1')) ? true : false;
+        vertical = (map[p]=='1' && (map[p+10]=='1' || map[p-10]=='1')) ? true : false;
     }
 
     if (left_edge) {
-        horizontal = (m[p]=='1' && (m[p+1]=='1')) ? true : false;
+        horizontal = (map[p]=='1' && (map[p+1]=='1')) ? true : false;
     } else if (right_edge) {
-        horizontal = (m[p]=='1' && (m[p-1]=='1')) ? true : false;
+        horizontal = (map[p]=='1' && (map[p-1]=='1')) ? true : false;
     } else if (!(left_edge || right_edge)) {
-        horizontal = (m[p]=='1' && (m[p+1]=='1' || m[p-1]=='1')) ? true : false;
+        horizontal = (map[p]=='1' && (map[p+1]=='1' || map[p-1]=='1')) ? true : false;
     }
 
     single = (!horizontal) && (!vertical);
@@ -229,7 +238,7 @@ void remove_edges(char* m, int p) {
     int temp = p;
     if (horizontal) {
         if (!right_edge) {
-            while (m[temp]=='1') {
+            while (map[temp]=='1') {
                 right=temp;
                 temp+=1;
             }
@@ -239,7 +248,7 @@ void remove_edges(char* m, int p) {
         }
         temp=p;
         if (!left_edge) {
-            while (m[temp]=='1') {
+            while (map[temp]=='1') {
                 left=temp;
                 temp-=1;
             }
@@ -252,7 +261,7 @@ void remove_edges(char* m, int p) {
     temp = p;
     if (vertical) {
         if (!down_edge) {
-            while (m[temp]=='1') {
+            while (map[temp]=='1') {
                 upper=temp;
                 temp-=10;
             }
@@ -263,7 +272,7 @@ void remove_edges(char* m, int p) {
 
         temp=p;
         if (!up_edge) {
-            while (m[temp]=='1') {
+            while (map[temp]=='1') {
                 down=temp;
                 temp+=10;
             }
@@ -273,69 +282,93 @@ void remove_edges(char* m, int p) {
         }
     }
 
+
+
     temp=p;
-    if (single && m[p]=='1') {
+    if (single && map[p]=='1') {
         if (!up_edge && !left_edge && !right_edge && !down_edge) {
-            m[p-11]='*';
-            m[p-10]='*';
-            m[p-9]='*';
-            m[p-1]='*';
-            m[p+1]='*';
-            m[p+9]='*';
-            m[p+10]='*';
-            m[p+11]='*';
+        	set_cursor(161);
+        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'A');
+            mask[p-11]='+';
+            mask[p-10]='+';
+            mask[p-9]='+';
+            mask[p-1]='+';
+            mask[p+1]='+';
+            mask[p+9]='+';
+            mask[p+10]='+';
+            mask[p+11]='+';
         }
         if (left_up) {
-            m[p+1]='*';
-            m[p+10]='*';
-            m[p+11]='*';
+        	set_cursor(161);
+        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'B');
+            mask[p+1]='+';
+            mask[p+10]='+';
+            mask[p+11]='+';
         }
         if (right_up) {
-            m[p-1]='*';
-            m[p+10]='*';
-            m[p+9]='*';
+        	set_cursor(161);
+        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'C');
+            mask[p-1]='+';
+            mask[p+10]='+';
+            mask[p+9]='+';
         }
         if (left_down) {
-            m[p-10]='*';
-            m[p-9]='*';
-            m[p+1]='*';
+        	set_cursor(161);
+        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'D');
+            mask[p-10]='+';
+            mask[p-9]='+';
+            mask[p+1]='+';
         }
         if (right_down) {
-            m[p-11]='*';
-            m[p-10]='*';
-            m[p-1]='*';
+        	set_cursor(161);
+        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'E');
+            mask[p-11]='+';
+            mask[p-10]='+';
+            mask[p-1]='+';
         }
         if (left_edge && !up_edge && !down_edge) {
-            m[p+1]='*';
-            m[p+10]='*';
-            m[p+11]='*';
-            m[p-10]='*';
-            m[p-9]='*';
+        	set_cursor(161);
+        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'F');
+            mask[p+1]='+';
+            mask[p+10]='+';
+            mask[p+11]='+';
+            mask[p-10]='+';
+            mask[p-9]='+';
         }
         if (right_edge && !up_edge && !down_edge) {
-            m[p-1]='*';
-            m[p+10]='*';
-            m[p+9]='*';
-            m[p-11]='*';
-            m[p-10]='*';
+        	set_cursor(161);
+        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'G');
+            mask[p-1]='+';
+            mask[p+10]='+';
+            mask[p+9]='+';
+            mask[p-11]='+';
+            mask[p-10]='+';
         }
         if (up_edge && !right_edge && !left_edge) {
-            m[p+1]='*';
-            m[p+10]='*';
-            m[p+11]='*';
-            m[p-1]='*';
-            m[p+9]='*';
+        	set_cursor(161);
+        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'H');
+            mask[p+1]='+';
+            mask[p+10]='+';
+            mask[p+11]='+';
+            mask[p-1]='+';
+            mask[p+9]='+';
         }
         if (down_edge && !left_edge && !right_edge) {
-            m[p+1]='*';
-            m[p-1]='*';
-            m[p-9]='*';
-            m[p-11]='*';
-            m[p-10]='*';
+        	set_cursor(161);
+        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'I');
+            mask[p+1]='+';
+            mask[p-1]='+';
+            mask[p-9]='+';
+            mask[p-11]='+';
+            mask[p-10]='+';
         }
     }
+    else {
+    	set_cursor(161);
+    	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'P');
+    }
 
-    print_matrix(START_POSITION, m);
+    print_matrix(START_POSITION, mask);
 
 }
 // ----------------------------------------------------------------------------
@@ -432,15 +465,15 @@ int main()
 				}
 
 				int x = get_mem_loc_from_cursor(set_cursor_here);
+				//remove_edges(mask, mapa, x);
+
 				if (mapa[x]=='0') {
 					mask[x]='O';
-					mapa[x]='O';
 					potez=false;
 				}
 				else if (mapa[x]=='1') {
 					mask[x]='X';
-					mapa[x]='X';
-					remove_edges(mapa, x);
+					remove_edges(mask, mapa, x);
 					//sendToSlave()
 					++completed_ships;
 					if (completed_ships==20) break;
