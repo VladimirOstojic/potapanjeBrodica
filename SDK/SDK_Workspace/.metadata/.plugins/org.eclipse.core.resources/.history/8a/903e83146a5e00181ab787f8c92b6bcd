@@ -32,7 +32,6 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include "platform.h"
 #include "vga_periph_mem.h"
 #include "xparameters.h"
@@ -158,31 +157,15 @@ int main()
 		set_cursor(4228);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
 		set_cursor(2652);
-
-	//reading the sent number
 		SlaveReadData(buf, sizeof(buf));
 		int mapNum=(int)(buf[0]);
-
-	//printing the number of the sent matrix
-		set_cursor(228);
+		set_cursor(220);
 		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,mapNum+48);
-		//printing the read matrix
 		char* map=all_maps[mapNum];
-		print_matrix(START_POSITION,map);
-		//choosing the random index of the matrix that we are going to use as slave matrix
-			int random=rand()%10;
-			char* slave_map=all_maps[random];
-			//printing the slave matrix
-			print_matrix(START_POSITION_LEFT,slave_map);
-			//sending the random chosen number of the slave matrix
-			//choosing the random index of the matrix that we are going to use as slave matrix
-			SlaveWriteData(random);
-			//printing the number of the sent matrix
-					set_cursor(220);
-					print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,random+48);
+
+		print_matrix(1540,map);
 		set_cursor(373);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s, 16);
-
 
 		while(1){
 			button = Xil_In32LE(XPAR_MY_PERIPHERAL_0_BASEADDR);

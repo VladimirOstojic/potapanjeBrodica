@@ -71,6 +71,16 @@ typedef u8 AddressType;
 //starting positions for matrix printing
 #define START_POSITION 1540
 #define START_POSITION_LEFT 1460
+/************************** Function Prototypes ******************************/
+
+int initIICMaster(u16 IicDeviceId, u8 slaveAddress);
+int recvFromSlave(u8* slavePtr);
+int sendToSlave(u8 simbol);
+static int SetupInterruptSystem(XIic * IicInstPtr);
+static void StatusHandler(void *CallbackRef, int Status);
+static void SendHandler(void *CallbackRef, int ByteCount);
+static void RecvHandler(void *CallbackRef, int ByteCount);
+
 /************************** Variable Definitions *****************************/
 
 /*
@@ -96,23 +106,6 @@ typedef enum {
 	DOWN_PRESSED,
 	UP_PRESSED
 } state_t;
-/************************** Function Prototypes ******************************/
-
-int initIICMaster(u16 IicDeviceId, u8 slaveAddress);
-int recvFromSlave(u8* slavePtr);
-int sendToSlave(u8 simbol);
-static int SetupInterruptSystem(XIic * IicInstPtr);
-static void StatusHandler(void *CallbackRef, int Status);
-static void SendHandler(void *CallbackRef, int ByteCount);
-static void RecvHandler(void *CallbackRef, int ByteCount);
-void print_matrix(int cursorPos, char c[]);
-state_t detect_keypress();
-int get_cursor_from_mem(int mem_location) ;
-int get_mem_loc_from_cursor(int cursor_pos);
-int move_cursor(int cursor, state_t key_pressed);
-void remove_edges(char* mask, char* map, int p);
-
-
 
 
 
@@ -135,6 +128,7 @@ int main()
 	int completed_ships = 0;
 	unsigned char string_s[] = "POTAPANJE BRODICA\n";
 	unsigned char string_igrac[] = "IGRAC 1";
+	unsigned char string_uspesno[]="USPESNO POSLATO";
 	u8 winner;
 
 	init_platform();
@@ -167,12 +161,12 @@ int main()
 		clear_graphics_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 
 		//char* mapa = map();
-		//choosing the random index of the matrix that we are going to use as master matrix
 		int random =rand()%10;
 		char* map=all_maps[random];
+		//random+=60;
 		//TODO send matrix that has been chosen to slave
+		//if(XST_SUCCESS=sendToSlave((char)random))
 			sendToSlave(random);
-			//printing the master random number
 			set_cursor(220);
 			//the value in the table is reading the octal integer values
 			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,48+random);
@@ -180,14 +174,9 @@ int main()
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s, 17);
 
 		set_cursor(4228);
+
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
-		//reading the matrix number sent from slave
-		recvFromSlave(slavePtr);
-		int slave_number=(int)slavePtr[0];
-		//printing the recieved number
-		set_cursor(228);
-				//the value in the table is reading the octal integer values
-				print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,48+slave_number);
+
 		int frame_cnt = 0;
 		char whitespace=' ';
 

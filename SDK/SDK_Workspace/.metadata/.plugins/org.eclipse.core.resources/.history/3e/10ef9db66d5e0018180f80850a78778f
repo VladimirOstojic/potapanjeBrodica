@@ -164,7 +164,7 @@ int main()
 		int mapNum=(int)(buf[0]);
 
 	//printing the number of the sent matrix
-		set_cursor(228);
+		set_cursor(220);
 		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,mapNum+48);
 		//printing the read matrix
 		char* map=all_maps[mapNum];
@@ -177,9 +177,6 @@ int main()
 			//sending the random chosen number of the slave matrix
 			//choosing the random index of the matrix that we are going to use as slave matrix
 			SlaveWriteData(random);
-			//printing the number of the sent matrix
-					set_cursor(220);
-					print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,random+48);
 		set_cursor(373);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s, 16);
 

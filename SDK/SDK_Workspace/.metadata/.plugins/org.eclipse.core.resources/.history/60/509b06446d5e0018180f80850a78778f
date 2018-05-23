@@ -172,7 +172,6 @@ int main()
 		char* map=all_maps[random];
 		//TODO send matrix that has been chosen to slave
 			sendToSlave(random);
-			//printing the master random number
 			set_cursor(220);
 			//the value in the table is reading the octal integer values
 			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,48+random);
@@ -180,14 +179,9 @@ int main()
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s, 17);
 
 		set_cursor(4228);
+
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
-		//reading the matrix number sent from slave
-		recvFromSlave(slavePtr);
-		int slave_number=(int)slavePtr[0];
-		//printing the recieved number
-		set_cursor(228);
-				//the value in the table is reading the octal integer values
-				print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,48+slave_number);
+
 		int frame_cnt = 0;
 		char whitespace=' ';
 
