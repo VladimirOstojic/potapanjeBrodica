@@ -68,9 +68,12 @@ typedef u8 AddressType;
 #define LEFT   0b00001000
 #define RIGHT  0b00000010
 #define CENTER 0b00000100
-//starting positions for matrix printing
+
+//start positions of each matrix
 #define START_POSITION 1540
 #define START_POSITION_LEFT 1460
+
+
 /************************** Variable Definitions *****************************/
 
 /*
@@ -96,8 +99,8 @@ typedef enum {
 	DOWN_PRESSED,
 	UP_PRESSED
 } state_t;
-/************************** Function Prototypes ******************************/
 
+/************************** Function Prototypes ******************************/
 int initIICMaster(u16 IicDeviceId, u8 slaveAddress);
 int recvFromSlave(u8* slavePtr);
 int sendToSlave(u8 simbol);
@@ -105,17 +108,14 @@ static int SetupInterruptSystem(XIic * IicInstPtr);
 static void StatusHandler(void *CallbackRef, int Status);
 static void SendHandler(void *CallbackRef, int ByteCount);
 static void RecvHandler(void *CallbackRef, int ByteCount);
+
 void print_matrix(int cursorPos, char c[]);
 state_t detect_keypress();
 int get_cursor_from_mem(int mem_location) ;
 int get_mem_loc_from_cursor(int cursor_pos);
 int move_cursor(int cursor, state_t key_pressed);
 void remove_edges(char* mask, char* map, int p);
-
-
-
-
-
+int len(char* string);
 // ----------------------------------------------------------------------------
 XIic IicInstance;		/* The instance of the IIC device. */
 XIntc InterruptController;	/* The instance of the Interrupt Controller */
@@ -135,6 +135,7 @@ int main()
 	int completed_ships = 0;
 	unsigned char string_s[] = "POTAPANJE BRODICA\n";
 	unsigned char string_igrac[] = "IGRAC 1";
+	unsigned char string_opponent_turn[] = "MISS - WAIT FOR YOUR TURN\n";
 	u8 winner;
 
 	init_platform();
@@ -144,14 +145,12 @@ int main()
 	int i;
 	int j;
 	u8 simbol;
-
 	int set_cursor_here = START_POSITION;
+
 	Status =  initIICMaster(IIC_DEVICE_ID, SLAVE_ADDRESS);
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
 	}
-
-
 
 	while(1){
 
@@ -166,40 +165,42 @@ int main()
 		clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 		clear_graphics_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 
-		//char* mapa = map();
-		//choosing the random index of the matrix that we are going to use as master matrix
-		int random =rand()%10;
+		// choose random matrix for master
+		int random = rand()%10;
 		char* map=all_maps[random];
-		//TODO send matrix that has been chosen to slave
-			sendToSlave(random);
-			//printing the master random number
-			set_cursor(220);
-			//the value in the table is reading the octal integer values
-			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,48+random);
+
+		//TODO send index of chosen matrix to slave
+		sendToSlave(random);
+		//print master's random number
+		set_cursor(220);
+		//the value in the table is reading the octal integer values
+		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,48+random);
 		set_cursor(368);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s, 17);
 
 		set_cursor(4228);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
-		//reading the matrix number sent from slave
+		// read matrix number received from slave
 		recvFromSlave(slavePtr);
 		int slave_number=(int)slavePtr[0];
-		//printing the recieved number
+		//print received number
 		set_cursor(228);
-				//the value in the table is reading the octal integer values
-				print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,48+slave_number);
+		//the value in the table is reading the octal integer values
+		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,48+slave_number);
+		//making slave map in master
+		char* slave_map=all_maps[slave_number];
 		int frame_cnt = 0;
 		char whitespace=' ';
+
 
 		print_matrix(START_POSITION_LEFT, map);
 
 		print_matrix(START_POSITION, mask);
 
-		// provera sta se nalazi - nije programerska logika, nego sama logika igrice...
 		// while (kraj_igre) -> while (na_potezu),potez se zavrsava ako se ne pogodi brodic,a ponavvlja se ako se pogodi brodic
-		// TODO funkcija pretrazivanja brodica
+		bool my_turn=true;
 		while (completed_ships<20) {
-			bool my_turn=true;
+			my_turn=true;
 			while(my_turn) {
 				state_t key = IDLE;
 				while (key!=CENTER_PRESSED) {
@@ -209,7 +210,7 @@ int main()
 					frame_cnt++;
 					set_cursor_here = move_cursor(set_cursor_here, key);
 					set_cursor(set_cursor_here);
-					if (frame_cnt%6<3) {
+					if (frame_cnt%10<5) {
 						print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, whitespace);
 					}
 					else {
@@ -220,22 +221,36 @@ int main()
 				int x = get_mem_loc_from_cursor(set_cursor_here);
 				//remove_edges(mask, map, x);
 
-				if (map[x]=='0') {
+				if (slave_map[x]=='0') {
 					mask[x]='O';
 					my_turn=false;
+					set_cursor(190+4*160);
+					print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_opponent_turn, sizeof(string_opponent_turn)/sizeof(char) - 2);
+					sendToSlave('*');
 				}
-				else if (map[x]=='1') {
+				else if (slave_map[x]=='1') {
 					mask[x]='X';
 					//remove_edges(mask, mapa, x);
 					//sendToSlave()
 					completed_ships++;
 					if (completed_ships==20) break;
-					set_cursor(161);
 				}
-
 				print_matrix(START_POSITION, mask);
 			}
-
+			int k;
+			for (k=-10000000; k<10000000; k++) {}
+			my_turn=true;
+			clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
+			print_matrix(START_POSITION, mask);
+			print_matrix(START_POSITION_LEFT, slave_map);
+			set_cursor(368);
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s, 17);
+			set_cursor(4228);
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
+			// TODO send some unique sign to slave
+			u8 flag = '*';
+			while (flag != '*')
+				recvFromSlave(&flag);
 			// sendToSlave(simbol);
 		}
 
@@ -663,6 +678,7 @@ state_t detect_keypress() {
 		state = IDLE;
 	}
 
+
 	return state;
 }
 // ---------------------------------------------------------------------------------
@@ -893,3 +909,4 @@ void remove_edges(char* mask, char* map, int p) {
     print_matrix(START_POSITION, mask);
 
 }
+
