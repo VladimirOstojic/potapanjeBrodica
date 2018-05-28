@@ -125,15 +125,8 @@ int main() {
 	} state_t;
 
 	unsigned char string_s[] = "POTAPANJE BRODICA\n";
-	unsigned char string_odabrali[] = "ODABRALI STE SIMBOL";
+	unsigned char string_lose[] = "YOU LOSE";
 	unsigned char string_igrac[] = "IGRAC 2";
-	unsigned char string_kamen[] = "KAMEN";
-	unsigned char string_makaze[] = "MAKAZE";
-	unsigned char string_papir[] = "PAPIR";
-	unsigned char string_cekam[] = "CEKAM";
-	unsigned char string_nereseno[] = "NERESENO";
-	unsigned char string_pobeda_1[] = "IGRAC 1 POBEDJUJE";
-	unsigned char string_pobeda_2[] = "IGRAC 2 POBEDJUJE";
 
 	init_platform();
 	initIICSlave(XPAR_AXI_IIC_0_DEVICE_ID, SLAVE_ADDRESS);
@@ -168,8 +161,7 @@ int main() {
 		clear_graphics_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 
 		set_cursor(395);
-		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_cekam,
-				5);
+//		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_cekam, 5);
 
 		set_cursor(4228);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac,
@@ -185,8 +177,8 @@ int main() {
 		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, map_num + 48);
 
 		//printing the read matrix
-		char* map = all_maps[map_num];
-		print_matrix(START_POSITION, map);
+		char* master_map = all_maps[map_num];
+		print_matrix(START_POSITION, master_map);
 		//choosing the random index of the matrix that we are going to use as slave matrix
 
 		int random = rand() % 10;
@@ -224,8 +216,7 @@ int main() {
 					set_cursor_here = move_cursor(set_cursor_here, key);
 					set_cursor(set_cursor_here);
 					if (frame_cnt % 10 < 5) {
-						print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-								whitespace);
+						print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, whitespace);
 					} else {
 						print_matrix(START_POSITION, mask);
 					}
@@ -234,20 +225,48 @@ int main() {
 				x = get_mem_loc_from_cursor(set_cursor_here);
 				//remove_edges(mask, map, x);
 
-				if (slave_map[x] == '0') {
+				if (master_map[x] == '0') {
 					mask[x] = 'O';
+					master_map[x]='O';
 					slave_turn = false;
-					SlaveWriteData('*');
-				} else if (slave_map[x] == '1') {
+					SlaveWriteData('+');
+				} else if (master_map[x] == '1') {
 					mask[x] = 'X';
+					master_map[x]='*';
+					print_matrix(START_POSITION, mask);
 					//remove_edges(mask, mapa, x);
-					//
 					completed_ships++;
-					if (completed_ships == 20)
-						break;
-					set_cursor(161);
+					if (completed_ships == 20) {
+						while(1) {
+							set_cursor(550);
+							clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
+							for (i = 0; i < 10; i++) {
+								if (i % 2 == 0) {
+									print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "WIN",
+											3);
+									VGA_PERIPH_MEM_mWriteMemory(
+											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
+											0x0000FF);			// foreground 4
+									VGA_PERIPH_MEM_mWriteMemory(
+											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
+											0xFFFFFF);			// background color 5
+									for (j = -2500000; j < 2500000; j++)
+										;
+								} else {
+									print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "WIN",
+											3);
+									VGA_PERIPH_MEM_mWriteMemory(
+											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
+											0xFFFFFF);			// foreground 4
+									VGA_PERIPH_MEM_mWriteMemory(
+											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
+											0x0000FF);			// background color 5
+									for (j = -2500000; j < 2500000; j++) {}
+								}
+							}
+						}
+					}
 				}
-				print_matrix(START_POSITION, mask);
 			}
 			int k;
 			//for (k = -10000000; k < 10000000; k++) {
@@ -263,8 +282,16 @@ int main() {
 			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
 					string_igrac, 7);
 			u8 flag = 0;
-			while (flag!='*')
+			while (flag!='+') {
 				SlaveReadData(&flag, 8);
+				if (flag == 'W') {
+					clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
+					set_cursor(548);
+					while(1) {
+						print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_lose, sizeof(string_lose)/sizeof(char)-1);
+					}
+				}
+			}
 //			sendToSlave(x);
 		}
 		/*
@@ -298,26 +325,22 @@ int main() {
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac,
 				7);
 		set_cursor(368);
-		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_odabrali,
-				19);
+//		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_odabrali, 19);
 
 		switch (state) {
 		case UP_PRESSED:
 			set_cursor(1030);
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-					string_makaze, 6);
+//			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,	string_makaze, 6);
 			simbol = 'M';
 			break;
 		case LEFT_PRESSED:
 			set_cursor(1033);
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-					string_papir, 5);
+//			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_papir, 5);
 			simbol = 'P';
 			break;
 		case RIGHT_PRESSED:
 			set_cursor(1033);
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-					string_kamen, 5);
+//			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,	string_kamen, 5);
 			simbol = 'K';
 			break;
 		case DOWN_PRESSED:
@@ -336,18 +359,17 @@ int main() {
 		switch (winner) {
 		case 0:
 			set_cursor(1668);
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-					string_nereseno, 8);
+//			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,	string_nereseno, 8);
 			break;
 		case 1:
 			set_cursor(1652);
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-					string_pobeda_1, 17);
+//			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
+//					string_pobeda_1, 17);
 			break;
 		case 2:
 			set_cursor(1652);
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-					string_pobeda_2, 17);
+//			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
+//					string_pobeda_2, 17);
 			break;
 		}
 
