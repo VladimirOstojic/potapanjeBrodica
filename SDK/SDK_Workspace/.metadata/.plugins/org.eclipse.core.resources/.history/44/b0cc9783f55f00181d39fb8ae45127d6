@@ -124,7 +124,7 @@ int main() {
 		UP_PRESSED
 	} state_t;
 
-	unsigned char string_s[] = "POTAPANJE BRODICA\n";
+	unsigned char string_s[] = "ODABERITE SIMBOL\n";
 	unsigned char string_odabrali[] = "ODABRALI STE SIMBOL";
 	unsigned char string_igrac[] = "IGRAC 2";
 	unsigned char string_kamen[] = "KAMEN";

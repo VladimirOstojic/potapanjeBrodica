@@ -124,7 +124,7 @@ int main() {
 		UP_PRESSED
 	} state_t;
 
-	unsigned char string_s[] = "POTAPANJE BRODICA\n";
+	unsigned char string_s[] = "ODABERITE SIMBOL\n";
 	unsigned char string_odabrali[] = "ODABRALI STE SIMBOL";
 	unsigned char string_igrac[] = "IGRAC 2";
 	unsigned char string_kamen[] = "KAMEN";
@@ -250,8 +250,8 @@ int main() {
 				print_matrix(START_POSITION, mask);
 			}
 			int k;
-			//for (k = -10000000; k < 10000000; k++) {
-			//}
+			for (k = -10000000; k < 10000000; k++) {
+			}
 			slave_turn = true;
 			clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 			print_matrix(START_POSITION, mask);

@@ -73,7 +73,6 @@ typedef u8 AddressType;
 #define START_POSITION 1540
 #define START_POSITION_LEFT 1460
 
-
 /************************** Variable Definitions *****************************/
 
 /*
@@ -83,21 +82,16 @@ typedef u8 AddressType;
  * structure must be volatile to work when the code is optimized.
  */
 volatile struct {
-	int  EventStatus;
-	int  RemainingRecvBytes;
-	int  RemainingSendBytes;
+	int EventStatus;
+	int RemainingRecvBytes;
+	int RemainingSendBytes;
 	int EventStatusUpdated;
 	int RecvBytesUpdated;
 	int SendBytesUpdated;
 } HandlerInfo;
 
 typedef enum {
-	IDLE,
-	LEFT_PRESSED,
-	RIGHT_PRESSED,
-	CENTER_PRESSED,
-	DOWN_PRESSED,
-	UP_PRESSED
+	IDLE, LEFT_PRESSED, RIGHT_PRESSED, CENTER_PRESSED, DOWN_PRESSED, UP_PRESSED
 } state_t;
 
 /************************** Function Prototypes ******************************/
@@ -111,14 +105,14 @@ static void RecvHandler(void *CallbackRef, int ByteCount);
 
 void print_matrix(int cursorPos, char c[]);
 state_t detect_keypress();
-int get_cursor_from_mem(int mem_location) ;
+int get_cursor_from_mem(int mem_location);
 int get_mem_loc_from_cursor(int cursor_pos);
 int move_cursor(int cursor, state_t key_pressed);
 void remove_edges(char* mask, char* map, int p);
 int len(char* string);
 // ----------------------------------------------------------------------------
-XIic IicInstance;		/* The instance of the IIC device. */
-XIntc InterruptController;	/* The instance of the Interrupt Controller */
+XIic IicInstance; /* The instance of the IIC device. */
+XIntc InterruptController; /* The instance of the Interrupt Controller */
 
 /*
  * Write buffer for writing a page.
@@ -129,8 +123,7 @@ volatile u8 TransmitComplete;
 volatile u8 ReceiveComplete;
 volatile u8 BusNotBusy;
 
-int main()
-{
+int main() {
 
 	int completed_ships = 0;
 	unsigned char string_s[] = "POTAPANJE BRODICA\n";
@@ -147,73 +140,81 @@ int main()
 	u8 simbol;
 	int set_cursor_here = START_POSITION;
 
-	Status =  initIICMaster(IIC_DEVICE_ID, SLAVE_ADDRESS);
+	Status = initIICMaster(IIC_DEVICE_ID, SLAVE_ADDRESS);
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
 	}
 
-	while(1){
+	while (1) {
 
-		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x00, 0x0);// direct mode   0
-		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x04, 0x3);// display_mode  1
-		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x08, 0x1);// show frame      2
-		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x0C, 0x1);// font size       3
-		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0xFFFFFF);// foreground 4
-		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0x0000FF);// background color 5
-		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x18, 0xFF0000);// frame color      6
+		VGA_PERIPH_MEM_mWriteMemory(
+				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x00, 0x0); // direct mode   0
+		VGA_PERIPH_MEM_mWriteMemory(
+				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x04, 0x3); // display_mode  1
+		VGA_PERIPH_MEM_mWriteMemory(
+				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x08, 0x1); // show frame      2
+		VGA_PERIPH_MEM_mWriteMemory(
+				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x0C, 0x1); // font size       3
+		VGA_PERIPH_MEM_mWriteMemory(
+				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0xFFFFFF); // foreground 4
+		VGA_PERIPH_MEM_mWriteMemory(
+				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0x0000FF); // background color 5
+		VGA_PERIPH_MEM_mWriteMemory(
+				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x18, 0xFF0000); // frame color      6
 
 		clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 		clear_graphics_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 
 		// choose random matrix for master
-		int random = rand()%10;
-		char* map=all_maps[random];
+		int random = rand() % 10;
+		char* map = all_maps[random];
 
 		//TODO send index of chosen matrix to slave
 		sendToSlave(random);
 		//print master's random number
 		set_cursor(220);
 		//the value in the table is reading the octal integer values
-		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,48+random);
+		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 48 + random);
 		set_cursor(368);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s, 17);
 
 		set_cursor(4228);
-		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
+		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac,
+				7);
 		// read matrix number received from slave
 		recvFromSlave(slavePtr);
-		int slave_number=(int)slavePtr[0];
+		int slave_number = (int) slavePtr[0];
 		//print received number
 		set_cursor(228);
 		//the value in the table is reading the octal integer values
-		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,48+slave_number);
+		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
+				48 + slave_number);
 		//making slave map in master
-		char* slave_map=all_maps[slave_number];
+		char* slave_map = all_maps[slave_number];
 		int frame_cnt = 0;
-		char whitespace=' ';
-
+		char whitespace = ' ';
 
 		print_matrix(START_POSITION_LEFT, map);
 
 		print_matrix(START_POSITION, mask);
 
 		// while (kraj_igre) -> while (na_potezu),potez se zavrsava ako se ne pogodi brodic,a ponavvlja se ako se pogodi brodic
-		bool my_turn=true;
-		while (completed_ships<20) {
-			my_turn=true;
-			while(my_turn) {
+		bool my_turn = true;
+		while (completed_ships < 20) {
+			while (my_turn) {
 				state_t key = IDLE;
-				while (key!=CENTER_PRESSED) {
-					key=detect_keypress();
-					int j=0;
-					for (j=0; j<1000000; j++) {}
+				while (key != CENTER_PRESSED) {
+					key = detect_keypress();
+					int j = 0;
+					for (j = 0; j < 1000000; j++) {
+					}
 					frame_cnt++;
 					set_cursor_here = move_cursor(set_cursor_here, key);
 					set_cursor(set_cursor_here);
-					if (frame_cnt%10<5) {
-						print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, whitespace);
-					}
-					else {
+					if (frame_cnt % 10 < 5) {
+						print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
+								whitespace);
+					} else {
 						print_matrix(START_POSITION, mask);
 					}
 				}
@@ -221,98 +222,107 @@ int main()
 				int x = get_mem_loc_from_cursor(set_cursor_here);
 				//remove_edges(mask, map, x);
 
-				if (slave_map[x]=='0') {
-					mask[x]='O';
-					my_turn=false;
-					set_cursor(190+4*160);
-					print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_opponent_turn, sizeof(string_opponent_turn)/sizeof(char) - 2);
+				if (slave_map[x] == '0') {
+					mask[x] = 'O';
+					my_turn = false;
+					set_cursor(190 + 4 * 160);
+					print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
+							string_opponent_turn,
+							sizeof(string_opponent_turn) / sizeof(char) - 2);
 					sendToSlave('*');
-				}
-				else if (slave_map[x]=='1') {
-					mask[x]='X';
+				} else if (slave_map[x] == '1') {
+					mask[x] = 'X';
 					//remove_edges(mask, mapa, x);
 					//sendToSlave()
 					completed_ships++;
-					if (completed_ships==20) break;
+					if (completed_ships == 20)
+						break;
 				}
 				print_matrix(START_POSITION, mask);
 			}
-			int k;
-			for (k=-10000000; k<10000000; k++) {}
-			my_turn=true;
+//			int k;
+			//for (k=-10000000; k<10000000; k++) {}
+//			my_turn = true;
 			clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 			print_matrix(START_POSITION, mask);
 			print_matrix(START_POSITION_LEFT, slave_map);
 			set_cursor(368);
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s, 17);
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s,
+					17);
 			set_cursor(4228);
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
+					string_igrac, 7);
 			// TODO send some unique sign to slave
-			u8 flag = '*';
+			u8 flag = 0;
 			while (flag != '*')
 				recvFromSlave(&flag);
+			my_turn = true;
 			// sendToSlave(simbol);
 		}
 
 		set_cursor(550);
 		clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 
-		for(i = 0; i < 10; i++) {
-			if(i % 2 == 0) {
-				print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "WIN", 3);
-				VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0x0000FF);// foreground 4
-				VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0xFFFFFF);// background color 5
-				for(j = -2500000; j < 2500000; j++);
-			}
-			else {
-				print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "WIN", 3);
-				VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0xFFFFFF);// foreground 4
-				VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0x0000FF);// background color 5
-				for(j = -2500000; j < 2500000; j++);
+		for (i = 0; i < 10; i++) {
+			if (i % 2 == 0) {
+				print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "WIN",
+						3);
+				VGA_PERIPH_MEM_mWriteMemory(
+						XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
+						0x0000FF);			// foreground 4
+				VGA_PERIPH_MEM_mWriteMemory(
+						XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
+						0xFFFFFF);			// background color 5
+				for (j = -2500000; j < 2500000; j++)
+					;
+			} else {
+				print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "WIN",
+						3);
+				VGA_PERIPH_MEM_mWriteMemory(
+						XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
+						0xFFFFFF);			// foreground 4
+				VGA_PERIPH_MEM_mWriteMemory(
+						XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
+						0x0000FF);			// background color 5
+				for (j = -2500000; j < 2500000; j++)
+					;
 			}
 		}
-
-
-
-
-
 
 // ------------------------------------------------------------------------------------
 		// cursor_temp_position sadrzi memorijsku lokaciju odabranog elementa
-	/*	clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
-		set_cursor(368);
-		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_odabrali, 19);
-		set_cursor(4228);
-		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
+		/*	clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
+		 set_cursor(368);
+		 print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_odabrali, 19);
+		 set_cursor(4228);
+		 print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
 
-	switch(state){
-			case UP_PRESSED :
-				set_cursor(1030);
-				print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_makaze, 6);
-				simbol = 'M';
-				break;
-			case LEFT_PRESSED :
-				set_cursor(1033);
-				print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_papir, 5);
-				simbol = 'P';
-				break;
-			case RIGHT_PRESSED :
-				set_cursor(1033);
-				print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_kamen, 5);
-				simbol = 'K';
-				break;
-			case DOWN_PRESSED :
-				break;
-			case CENTER_PRESSED :
-				break;
-			case IDLE:
-				break;
-		}
-*/
+		 switch(state){
+		 case UP_PRESSED :
+		 set_cursor(1030);
+		 print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_makaze, 6);
+		 simbol = 'M';
+		 break;
+		 case LEFT_PRESSED :
+		 set_cursor(1033);
+		 print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_papir, 5);
+		 simbol = 'P';
+		 break;
+		 case RIGHT_PRESSED :
+		 set_cursor(1033);
+		 print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_kamen, 5);
+		 simbol = 'K';
+		 break;
+		 case DOWN_PRESSED :
+		 break;
+		 case CENTER_PRESSED :
+		 break;
+		 case IDLE:
+		 break;
+		 }
+		 */
 
-
-
-		for(i = 0; i < 100000; i++){
+		for (i = 0; i < 100000; i++) {
 
 		}
 
@@ -320,104 +330,115 @@ int main()
 
 		slaveSym = slavePtr[0];
 
-		if(simbol == slaveSym){
+		if (simbol == slaveSym) {
 			set_cursor(1668);
 			u8 rezultat[] = "NERESENO\n";
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat, 8);
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
+					8);
 			winner = 0;
-		}else if(simbol == 'K' && slaveSym == 'P'){
+		} else if (simbol == 'K' && slaveSym == 'P') {
 			set_cursor(1652);
 			u8 rezultat[] = "IGRAC 2 POBEDJUJE\n";
 			winner = 2;
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat, 17);
-		}else if(simbol == 'K' && slaveSym == 'M'){
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
+					17);
+		} else if (simbol == 'K' && slaveSym == 'M') {
 			set_cursor(1652);
 			winner = 1;
 			u8 rezultat[] = "IGRAC 1 POBEDJUJE\n";
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat, 17);
-		}else if(simbol == 'P' && slaveSym == 'M'){
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
+					17);
+		} else if (simbol == 'P' && slaveSym == 'M') {
 			set_cursor(1652);
 			winner = 2;
 			u8 rezultat[] = "IGRAC 2 POBEDJUJE\n";
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat, 17);
-		}else if(simbol == 'P' && slaveSym == 'K'){
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
+					17);
+		} else if (simbol == 'P' && slaveSym == 'K') {
 			set_cursor(1652);
 			winner = 1;
 			u8 rezultat[] = "IGRAC 1 POBEDJUJE\n";
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat, 17);
-		}else if(simbol == 'M' && slaveSym == 'K'){
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
+					17);
+		} else if (simbol == 'M' && slaveSym == 'K') {
 			set_cursor(1652);
 			winner = 2;
 			u8 rezultat[] = "IGRAC 2 POBEDJUJE\n";
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat, 17);
-		}else if(simbol == 'M' && slaveSym == 'P'){
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
+					17);
+		} else if (simbol == 'M' && slaveSym == 'P') {
 			set_cursor(1652);
 			winner = 1;
 			u8 rezultat[] = "IGRAC 1 POBEDJUJE\n";
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat, 17);
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
+					17);
 		}
 
-		for(i = 0; i < 1000000; i++){
+		for (i = 0; i < 1000000; i++) {
 
 		}
 
 		sendToSlave(winner);
 
-		if(winner == 1) {
-			for(i = 0; i < 4; i++) {
-				if(i % 2 == 0) {
-					VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0x0000FF);// foreground 4
-					VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0xFFFFFF);// background color 5
-					for(j = -2500000; j < 2500000; j++);
-				}
-				else {
-					VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0xFFFFFF);// foreground 4
-					VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0x0000FF);// background color 5
-					for(j = -2500000; j < 2500000; j++);
+		if (winner == 1) {
+			for (i = 0; i < 4; i++) {
+				if (i % 2 == 0) {
+					VGA_PERIPH_MEM_mWriteMemory(
+							XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
+							0x0000FF);		// foreground 4
+					VGA_PERIPH_MEM_mWriteMemory(
+							XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
+							0xFFFFFF);		// background color 5
+					for (j = -2500000; j < 2500000; j++)
+						;
+				} else {
+					VGA_PERIPH_MEM_mWriteMemory(
+							XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
+							0xFFFFFF);		// foreground 4
+					VGA_PERIPH_MEM_mWriteMemory(
+							XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
+							0x0000FF);		// background color 5
+					for (j = -2500000; j < 2500000; j++)
+						;
 				}
 			}
-		}
-		else {
-			for (i = -10000000; i < 10000000; i++){
+		} else {
+			for (i = -10000000; i < 10000000; i++) {
 			}
 		}
-
 
 		i = 0;
 	}
 
- 	return 0;
+	return 0;
 }
-
 
 int initIICMaster(u16 IicDeviceId, u8 slaveAddress) {
 	int Status;
-	XIic_Config *ConfigPtr;	/* Pointer to configuration data */
+	XIic_Config *ConfigPtr; /* Pointer to configuration data */
 
 	/*
 	 * Initialize the IIC driver so that it is ready to use.
 	 */
 	ConfigPtr = XIic_LookupConfig(IicDeviceId);
-	if (ConfigPtr == NULL) {
+	if (ConfigPtr == NULL ) {
 		return XST_FAILURE;
 	}
 
 	Status = XIic_CfgInitialize(&IicInstance, ConfigPtr,
-					ConfigPtr->BaseAddress);
+			ConfigPtr->BaseAddress);
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
 	}
-
 
 	/*
 	 * Setup handler to process the asynchronous events which occur,
 	 * the driver is only interrupt driven such that this must be
 	 * done prior to starting the device.
 	 */
-	XIic_SetRecvHandler(&IicInstance, (void *)&HandlerInfo, RecvHandler);
-	XIic_SetSendHandler(&IicInstance, (void *)&HandlerInfo, SendHandler);
-	XIic_SetStatusHandler(&IicInstance, (void *)&HandlerInfo,
-					StatusHandler);
+	XIic_SetRecvHandler(&IicInstance, (void *) &HandlerInfo, RecvHandler);
+	XIic_SetSendHandler(&IicInstance, (void *) &HandlerInfo, SendHandler);
+	XIic_SetStatusHandler(&IicInstance, (void *) &HandlerInfo, StatusHandler);
 
 	/*
 	 * Connect the ISR to the interrupt and enable interrupts.
@@ -454,15 +475,15 @@ int recvFromSlave(u8* slaveDataPtr) {
 	 * on the IIC interface, ignore the return value since this example is
 	 * a single master system such that the IIC bus should not ever be busy
 	 */
-	(void)XIic_MasterRecv(&IicInstance, slaveDataPtr, 2);
+	(void) XIic_MasterRecv(&IicInstance, slaveDataPtr, 2);
 
 	/*
 	 * The message is being received from the temperature sensor,
 	 * wait for it to complete by polling the information that is
 	 * updated asynchronously by interrupt processing
 	 */
-	while(1) {
-		if(HandlerInfo.RecvBytesUpdated == TRUE) {
+	while (1) {
+		if (HandlerInfo.RecvBytesUpdated == TRUE) {
 			/*
 			 * The device information has been updated for receive
 			 * processing,if all bytes received (1), indicate
@@ -493,7 +514,7 @@ int sendToSlave(u8 simbol) {
 	IicInstance.Stats.TxErrors = 0;
 
 	XIic_MasterSend(&IicInstance, WriteBuffer, PAGE_SIZE);
-	while(XIic_IsIicBusy(&IicInstance)){
+	while (XIic_IsIicBusy(&IicInstance)) {
 	}
 
 	return XST_SUCCESS;
@@ -501,87 +522,84 @@ int sendToSlave(u8 simbol) {
 
 /****************************************************************************/
 /**
-* This Send handler is called asynchronously from an interrupt
-* context and indicates that data in the specified buffer has been sent.
-*
-* @param	CallBackRef is a pointer to the IIC device driver instance which
-*		the handler is being called for.
-* @param	ByteCount indicates the number of bytes remaining to be received of
-*		the requested byte count. A value of zero indicates all requested
-*		bytes were received.
-*
-* @return	None.
-*
-* @notes	None.
-*
-****************************************************************************/
-static void SendHandler(void *CallbackRef, int ByteCount){
+ * This Send handler is called asynchronously from an interrupt
+ * context and indicates that data in the specified buffer has been sent.
+ *
+ * @param	CallBackRef is a pointer to the IIC device driver instance which
+ *		the handler is being called for.
+ * @param	ByteCount indicates the number of bytes remaining to be received of
+ *		the requested byte count. A value of zero indicates all requested
+ *		bytes were received.
+ *
+ * @return	None.
+ *
+ * @notes	None.
+ *
+ ****************************************************************************/
+static void SendHandler(void *CallbackRef, int ByteCount) {
 	HandlerInfo.RemainingSendBytes = ByteCount;
 	HandlerInfo.SendBytesUpdated = TRUE;
 }
 
 /*****************************************************************************/
 /**
-* This receive handler is called asynchronously from an interrupt context and
-* and indicates that data in the specified buffer was received. The byte count
-* should equal the byte count of the buffer if all the buffer was filled.
-*
-* @param	CallBackRef is a pointer to the IIC device driver instance which
-*		the handler is being called for.
-* @param	ByteCount indicates the number of bytes remaining to be received of
-*		the requested byte count. A value of zero indicates all requested
-*		bytes were received.
-*
-* @return	None.
-*
-* @notes	None.
-*
-****************************************************************************/
-static void RecvHandler(void *CallbackRef, int ByteCount)
-{
+ * This receive handler is called asynchronously from an interrupt context and
+ * and indicates that data in the specified buffer was received. The byte count
+ * should equal the byte count of the buffer if all the buffer was filled.
+ *
+ * @param	CallBackRef is a pointer to the IIC device driver instance which
+ *		the handler is being called for.
+ * @param	ByteCount indicates the number of bytes remaining to be received of
+ *		the requested byte count. A value of zero indicates all requested
+ *		bytes were received.
+ *
+ * @return	None.
+ *
+ * @notes	None.
+ *
+ ****************************************************************************/
+static void RecvHandler(void *CallbackRef, int ByteCount) {
 	HandlerInfo.RemainingRecvBytes = ByteCount;
 	HandlerInfo.RecvBytesUpdated = TRUE;
 }
 
 /*****************************************************************************/
 /**
-* This status handler is called asynchronously from an interrupt context and
-* indicates that the conditions of the IIC bus changed. This  handler should
-* not be called for the application unless an error occurs.
-*
-* @param	CallBackRef is a pointer to the IIC device driver instance which the
-*		handler is being called for.
-* @param	Status contains the status of the IIC bus which changed.
-*
-* @return	None.
-*
-* @notes	None.
-*
-****************************************************************************/
-static void StatusHandler(void *CallbackRef, int Status)
-{
+ * This status handler is called asynchronously from an interrupt context and
+ * indicates that the conditions of the IIC bus changed. This  handler should
+ * not be called for the application unless an error occurs.
+ *
+ * @param	CallBackRef is a pointer to the IIC device driver instance which the
+ *		handler is being called for.
+ * @param	Status contains the status of the IIC bus which changed.
+ *
+ * @return	None.
+ *
+ * @notes	None.
+ *
+ ****************************************************************************/
+static void StatusHandler(void *CallbackRef, int Status) {
 	HandlerInfo.EventStatus |= Status;
 	HandlerInfo.EventStatusUpdated = TRUE;
 }
 
 /****************************************************************************/
 /**
-* This function setups the interrupt system so interrupts can occur for the
-* IIC. The function is application-specific since the actual system may or
-* may not have an interrupt controller. The IIC device could be directly
-* connected to a processor without an interrupt controller. The user should
-* modify this function to fit the application.
-*
-* @param	IicInstPtr contains a pointer to the instance of the IIC  which
-*		is going to be connected to the interrupt controller.
-*
-* @return	XST_SUCCESS if successful else XST_FAILURE.
-*
-* @note		None.
-*
-****************************************************************************/
-static int SetupInterruptSystem(XIic * IicInstPtr)
-{
+ * This function setups the interrupt system so interrupts can occur for the
+ * IIC. The function is application-specific since the actual system may or
+ * may not have an interrupt controller. The IIC device could be directly
+ * connected to a processor without an interrupt controller. The user should
+ * modify this function to fit the application.
+ *
+ * @param	IicInstPtr contains a pointer to the instance of the IIC  which
+ *		is going to be connected to the interrupt controller.
+ *
+ * @return	XST_SUCCESS if successful else XST_FAILURE.
+ *
+ * @note		None.
+ *
+ ****************************************************************************/
+static int SetupInterruptSystem(XIic * IicInstPtr) {
 	int Status;
 
 	if (InterruptController.IsStarted == XIL_COMPONENT_IS_STARTED) {
@@ -602,8 +620,7 @@ static int SetupInterruptSystem(XIic * IicInstPtr)
 	 * performs the specific interrupt processing for the device.
 	 */
 	Status = XIntc_Connect(&InterruptController, IIC_INTR_ID,
-				   (XInterruptHandler) XIic_InterruptHandler,
-				   IicInstPtr);
+			(XInterruptHandler) XIic_InterruptHandler, IicInstPtr);
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
 	}
@@ -631,14 +648,13 @@ static int SetupInterruptSystem(XIic * IicInstPtr)
 	 * Register the interrupt controller handler with the exception table.
 	 */
 	Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT,
-				 (Xil_ExceptionHandler) XIntc_InterruptHandler,
-				 &InterruptController);
+			(Xil_ExceptionHandler) XIntc_InterruptHandler,
+			&InterruptController);
 
 	/*
 	 * Enable non-critical exceptions.
 	 */
 	Xil_ExceptionEnable();
-
 
 	return XST_SUCCESS;
 }
@@ -646,16 +662,15 @@ static int SetupInterruptSystem(XIic * IicInstPtr)
 // 1450 prva + offset 104
 void print_matrix(int cursorPos, char c[]) {
 
-	int i=0;
-	for (i=0; i<100; i++) {
-		if ((4*(i%10)==0) && (i!=0)) {
-			cursorPos+=160;
-			set_cursor(cursorPos+4*(i%10));
+	int i = 0;
+	for (i = 0; i < 100; i++) {
+		if ((4 * (i % 10) == 0) && (i != 0)) {
+			cursorPos += 160;
+			set_cursor(cursorPos + 4 * (i % 10));
 			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, c[i]);
 
-		}
-		else {
-			set_cursor(cursorPos+4*(i%10));
+		} else {
+			set_cursor(cursorPos + 4 * (i % 10));
 			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, c[i]);
 		}
 	}
@@ -678,52 +693,50 @@ state_t detect_keypress() {
 		state = IDLE;
 	}
 
-
 	return state;
 }
 // ---------------------------------------------------------------------------------
 
 // ------------------------------DODATO---------------------------------------------
 int get_cursor_from_mem(int mem_location) {
-    int cursor_x, cursor_y;
-    cursor_y = mem_location/10;
-    cursor_x = mem_location%10;
-    return START_POSITION + cursor_x*4 + cursor_y*160;
+	int cursor_x, cursor_y;
+	cursor_y = mem_location / 10;
+	cursor_x = mem_location % 10;
+	return START_POSITION + cursor_x * 4 + cursor_y * 160;
 }
 
 int get_mem_loc_from_cursor(int cursor_pos) {
-    int mem_x, mem_y;
-    cursor_pos -= START_POSITION;
-    mem_y = cursor_pos/160;
-    mem_x = cursor_pos%40/4;
-    return mem_y*10 + mem_x;
+	int mem_x, mem_y;
+	cursor_pos -= START_POSITION;
+	mem_y = cursor_pos / 160;
+	mem_x = cursor_pos % 40 / 4;
+	return mem_y * 10 + mem_x;
 }
 // ---------------------------------------------------------------------------------
 
-
 // ---------------------------OBAVLJENE VECE PROMENE -------------------------------
 int move_cursor(int cursor, state_t key_pressed) {
-    bool right_edge, left_edge, up_edge, down_edge;
+	bool right_edge, left_edge, up_edge, down_edge;
 
-    int pos = get_mem_loc_from_cursor(cursor);
+	int pos = get_mem_loc_from_cursor(cursor);
 
-	left_edge = (pos%10==0) ? true : false;
-    right_edge = (pos%10==9) ? true : false;
-    down_edge = (pos>=90) ? true : false;
-    up_edge = (pos<=9) ? true : false;
+	left_edge = (pos % 10 == 0) ? true : false;
+	right_edge = (pos % 10 == 9) ? true : false;
+	down_edge = (pos >= 90) ? true : false;
+	up_edge = (pos <= 9) ? true : false;
 
-    if (key_pressed==LEFT_PRESSED)
-        pos = (left_edge) ? pos : pos-1;
-    else if (key_pressed==RIGHT_PRESSED)
-        pos = (right_edge) ? pos : pos+1;
-    else if (key_pressed==UP_PRESSED)
-        pos = (up_edge) ? pos : pos-10;
-    else if (key_pressed==DOWN_PRESSED)
-        pos = (down_edge) ? pos : pos+10;
-    else if (key_pressed==CENTER_PRESSED)
-        pos=pos;
+	if (key_pressed == LEFT_PRESSED)
+		pos = (left_edge) ? pos : pos - 1;
+	else if (key_pressed == RIGHT_PRESSED)
+		pos = (right_edge) ? pos : pos + 1;
+	else if (key_pressed == UP_PRESSED)
+		pos = (up_edge) ? pos : pos - 10;
+	else if (key_pressed == DOWN_PRESSED)
+		pos = (down_edge) ? pos : pos + 10;
+	else if (key_pressed == CENTER_PRESSED)
+		pos = pos;
 
-    return get_cursor_from_mem(pos);
+	return get_cursor_from_mem(pos);
 }
 
 void remove_edges(char* mask, char* map, int p) {
@@ -731,182 +744,179 @@ void remove_edges(char* mask, char* map, int p) {
 	set_cursor(165);
 
 	int x = 0;
-	for (x=0; x<100; x++) {
-		if (p==x) print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, p);
+	for (x = 0; x < 100; x++) {
+		if (p == x)
+			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, p);
 	}
 //    p==0 ? print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'Q') : print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'W');
 
-    bool horizontal, vertical, single;
-    bool right_edge, left_edge, up_edge, down_edge;
-    int upper, down, left, right;
+	bool horizontal, vertical, single;
+	bool right_edge, left_edge, up_edge, down_edge;
+	int upper, down, left, right;
 
-    int ship_size=1;
+	int ship_size = 1;
 
-    bool left_up, left_down, right_down, right_up;
+	bool left_up, left_down, right_down, right_up;
 
-    left_edge = (p%10==0) ? true : false;
-    right_edge = (p%10==9) ? true : false;
-    down_edge = (p>90) ? true : false;
-    up_edge = (p<=9) ? true : false;
+	left_edge = (p % 10 == 0) ? true : false;
+	right_edge = (p % 10 == 9) ? true : false;
+	down_edge = (p > 90) ? true : false;
+	up_edge = (p <= 9) ? true : false;
 
-    left_up = left_edge && up_edge;
-    left_down = left_edge && down_edge;
-    right_down = right_edge && down_edge;
-    right_up = right_edge && up_edge;
+	left_up = left_edge && up_edge;
+	left_down = left_edge && down_edge;
+	right_down = right_edge && down_edge;
+	right_up = right_edge && up_edge;
 
+	if (up_edge) {
+		vertical = (map[p] == '1' && (map[p + 10] == '1')) ? true : false;
+	} else if (down_edge) {
+		vertical = (map[p] == '1' && (map[p - 10] == '1')) ? true : false;
+	} else if (!(up_edge || down_edge)) {
+		vertical =
+				(map[p] == '1' && (map[p + 10] == '1' || map[p - 10] == '1')) ?
+						true : false;
+	}
 
-    if (up_edge) {
-        vertical = (map[p]=='1' && (map[p+10]=='1')) ? true : false;
-    } else if (down_edge) {
-        vertical = (map[p]=='1' && (map[p-10]=='1')) ? true : false;
-    } else if (!(up_edge || down_edge)){
-        vertical = (map[p]=='1' && (map[p+10]=='1' || map[p-10]=='1')) ? true : false;
-    }
+	if (left_edge) {
+		horizontal = (map[p] == '1' && (map[p + 1] == '1')) ? true : false;
+	} else if (right_edge) {
+		horizontal = (map[p] == '1' && (map[p - 1] == '1')) ? true : false;
+	} else if (!(left_edge || right_edge)) {
+		horizontal =
+				(map[p] == '1' && (map[p + 1] == '1' || map[p - 1] == '1')) ?
+						true : false;
+	}
 
-    if (left_edge) {
-        horizontal = (map[p]=='1' && (map[p+1]=='1')) ? true : false;
-    } else if (right_edge) {
-        horizontal = (map[p]=='1' && (map[p-1]=='1')) ? true : false;
-    } else if (!(left_edge || right_edge)) {
-        horizontal = (map[p]=='1' && (map[p+1]=='1' || map[p-1]=='1')) ? true : false;
-    }
+	single = (!horizontal) && (!vertical);
 
-    single = (!horizontal) && (!vertical);
+	int temp = p;
+	if (horizontal) {
+		if (!right_edge) {
+			while (map[temp] == '1') {
+				right = temp;
+				temp += 1;
+			}
+		} else {
+			right = temp;
+		}
+		temp = p;
+		if (!left_edge) {
+			while (map[temp] == '1') {
+				left = temp;
+				temp -= 1;
+			}
+		} else {
+			left = temp;
+		}
+	}
 
-    int temp = p;
-    if (horizontal) {
-        if (!right_edge) {
-            while (map[temp]=='1') {
-                right=temp;
-                temp+=1;
-            }
-        }
-        else {
-            right=temp;
-        }
-        temp=p;
-        if (!left_edge) {
-            while (map[temp]=='1') {
-                left=temp;
-                temp-=1;
-            }
-        }
-        else {
-            left=temp;
-        }
-    }
+	temp = p;
+	if (vertical) {
+		if (!down_edge) {
+			while (map[temp] == '1') {
+				upper = temp;
+				temp -= 10;
+			}
+		} else {
+			down = temp;
+		}
 
-    temp = p;
-    if (vertical) {
-        if (!down_edge) {
-            while (map[temp]=='1') {
-                upper=temp;
-                temp-=10;
-            }
-        }
-        else {
-            down=temp;
-        }
+		temp = p;
+		if (!up_edge) {
+			while (map[temp] == '1') {
+				down = temp;
+				temp += 10;
+			}
+		} else {
+			upper = temp;
+		}
+	}
 
-        temp=p;
-        if (!up_edge) {
-            while (map[temp]=='1') {
-                down=temp;
-                temp+=10;
-            }
-        }
-        else {
-            upper=temp;
-        }
-    }
+	temp = p;
+	if (single && map[p] == '1') {
+		if (!up_edge && !left_edge && !right_edge && !down_edge) {
+			set_cursor(161);
+			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'A');
+			mask[p - 11] = '+';
+			mask[p - 10] = '+';
+			mask[p - 9] = '+';
+			mask[p - 1] = '+';
+			mask[p + 1] = '+';
+			mask[p + 9] = '+';
+			mask[p + 10] = '+';
+			mask[p + 11] = '+';
+		}
+		if (left_up) {
+			set_cursor(161);
+			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'B');
+			mask[p + 1] = '+';
+			mask[p + 10] = '+';
+			mask[p + 11] = '+';
+		}
+		if (right_up) {
+			set_cursor(161);
+			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'C');
+			mask[p - 1] = '+';
+			mask[p + 10] = '+';
+			mask[p + 9] = '+';
+		}
+		if (left_down) {
+			set_cursor(161);
+			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'D');
+			mask[p - 10] = '+';
+			mask[p - 9] = '+';
+			mask[p + 1] = '+';
+		}
+		if (right_down) {
+			set_cursor(161);
+			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'E');
+			mask[p - 11] = '+';
+			mask[p - 10] = '+';
+			mask[p - 1] = '+';
+		}
+		if (left_edge && !up_edge && !down_edge) {
+			set_cursor(161);
+			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'F');
+			mask[p + 1] = '+';
+			mask[p + 10] = '+';
+			mask[p + 11] = '+';
+			mask[p - 10] = '+';
+			mask[p - 9] = '+';
+		}
+		if (right_edge && !up_edge && !down_edge) {
+			set_cursor(161);
+			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'G');
+			mask[p - 1] = '+';
+			mask[p + 10] = '+';
+			mask[p + 9] = '+';
+			mask[p - 11] = '+';
+			mask[p - 10] = '+';
+		}
+		if (up_edge && !right_edge && !left_edge) {
+			set_cursor(161);
+			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'H');
+			mask[p + 1] = '+';
+			mask[p + 10] = '+';
+			mask[p + 11] = '+';
+			mask[p - 1] = '+';
+			mask[p + 9] = '+';
+		}
+		if (down_edge && !left_edge && !right_edge) {
+			set_cursor(161);
+			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'I');
+			mask[p + 1] = '+';
+			mask[p - 1] = '+';
+			mask[p - 9] = '+';
+			mask[p - 11] = '+';
+			mask[p - 10] = '+';
+		}
+	} else {
+		set_cursor(161);
+		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'P');
+	}
 
-
-
-    temp=p;
-    if (single && map[p]=='1') {
-        if (!up_edge && !left_edge && !right_edge && !down_edge) {
-        	set_cursor(161);
-        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'A');
-            mask[p-11]='+';
-            mask[p-10]='+';
-            mask[p-9]='+';
-            mask[p-1]='+';
-            mask[p+1]='+';
-            mask[p+9]='+';
-            mask[p+10]='+';
-            mask[p+11]='+';
-        }
-        if (left_up) {
-        	set_cursor(161);
-        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'B');
-            mask[p+1]='+';
-            mask[p+10]='+';
-            mask[p+11]='+';
-        }
-        if (right_up) {
-        	set_cursor(161);
-        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'C');
-            mask[p-1]='+';
-            mask[p+10]='+';
-            mask[p+9]='+';
-        }
-        if (left_down) {
-        	set_cursor(161);
-        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'D');
-            mask[p-10]='+';
-            mask[p-9]='+';
-            mask[p+1]='+';
-        }
-        if (right_down) {
-        	set_cursor(161);
-        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'E');
-            mask[p-11]='+';
-            mask[p-10]='+';
-            mask[p-1]='+';
-        }
-        if (left_edge && !up_edge && !down_edge) {
-        	set_cursor(161);
-        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'F');
-            mask[p+1]='+';
-            mask[p+10]='+';
-            mask[p+11]='+';
-            mask[p-10]='+';
-            mask[p-9]='+';
-        }
-        if (right_edge && !up_edge && !down_edge) {
-        	set_cursor(161);
-        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'G');
-            mask[p-1]='+';
-            mask[p+10]='+';
-            mask[p+9]='+';
-            mask[p-11]='+';
-            mask[p-10]='+';
-        }
-        if (up_edge && !right_edge && !left_edge) {
-        	set_cursor(161);
-        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'H');
-            mask[p+1]='+';
-            mask[p+10]='+';
-            mask[p+11]='+';
-            mask[p-1]='+';
-            mask[p+9]='+';
-        }
-        if (down_edge && !left_edge && !right_edge) {
-        	set_cursor(161);
-        	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'I');
-            mask[p+1]='+';
-            mask[p-1]='+';
-            mask[p-9]='+';
-            mask[p-11]='+';
-            mask[p-10]='+';
-        }
-    }
-    else {
-    	set_cursor(161);
-    	print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'P');
-    }
-
-    print_matrix(START_POSITION, mask);
+	print_matrix(START_POSITION, mask);
 
 }
 
