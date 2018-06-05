@@ -187,9 +187,7 @@ int main() {
 		//print received number
 		set_cursor(228);
 		//the value in the table is reading the octal integer values
-		//print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-
-		48 + slave_number);
+		//print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 48 + slave_number);
 		//making slave map in master
 		char* slave_map = all_maps[slave_number];
 		int frame_cnt = 0;
