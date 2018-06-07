@@ -123,18 +123,23 @@ volatile u8 TransmitComplete;
 volatile u8 ReceiveComplete;
 volatile u8 BusNotBusy;
 
+unsigned char string_s[] = "POTAPANJE BRODICA\n";
+unsigned char string_igrac[] = "IGRAC 1";
+unsigned char string_opponent_turn[] = "MISS - WAIT FOR YOUR TURN\n";
+unsigned char winner_s[] = "WIN\n";
+unsigned char loser_s[] = "LOSE\n";
+
+
 int main() {
 
 	int completed_ships = 0;
-	unsigned char string_s[] = "POTAPANJE BRODICA\n";
-	unsigned char string_igrac[] = "IGRAC 1";
-	unsigned char string_opponent_turn[] = "MISS - WAIT FOR YOUR TURN\n";
+
 	u8 winner;
 
 	init_platform();
 	int Status;
 	u8 slavePtr[2];
-	u8 slaveSym;
+
 	int i;
 	int j;
 	u8 simbol;
@@ -165,31 +170,20 @@ int main() {
 		clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 		clear_graphics_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 
-		// choose random matrix for master
 		int random = rand() % 10;
 		char* master_map = all_maps[random];
 
-		//TODO send index of chosen matrix to slave
+
 		sendToSlave(random);
-		//print master's random number
 		set_cursor(220);
-		//the value in the table is reading the octal integer values
-		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 48 + random);
 		set_cursor(368);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s, 17);
 
 		set_cursor(4228);
-		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac,
-				7);
-		// read matrix number received from slave
+		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
 		recvFromSlave(slavePtr);
 		int slave_number = (int) slavePtr[0];
-		//print received number
 		set_cursor(228);
-		//the value in the table is reading the octal integer values
-		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-				48 + slave_number);
-		//making slave map in master
 		char* slave_map = all_maps[slave_number];
 		int frame_cnt = 0;
 		char whitespace = ' ';
@@ -198,7 +192,6 @@ int main() {
 
 		print_matrix(START_POSITION, mask);
 
-		// while (kraj_igre) -> while (na_potezu),potez se zavrsava ako se ne pogodi brodic,a ponavvlja se ako se pogodi brodic
 		bool my_turn = true;
 		while (completed_ships < 20) {
 			while (my_turn) {
@@ -212,57 +205,56 @@ int main() {
 					set_cursor_here = move_cursor(set_cursor_here, key);
 					set_cursor(set_cursor_here);
 					if (frame_cnt % 10 < 5) {
-						print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, whitespace);
+						print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
+								whitespace);
 					} else {
 						print_matrix(START_POSITION, mask);
 					}
 				}
 
 				int x = get_mem_loc_from_cursor(set_cursor_here);
-				//remove_edges(mask, map, x);
+
 
 				if (slave_map[x] == '0') {
 					mask[x] = 'O';
-					slave_map[x]='O';
+					slave_map[x] = 'O';
 					my_turn = false;
-/*					set_cursor(190 + 4 * 160);
-					print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-							string_opponent_turn,
-							sizeof(string_opponent_turn) / sizeof(char) - 2); */
 					sendToSlave('+');
 				} else if (slave_map[x] == '1') {
+					remove_edges(mask, slave_map, x);
 					mask[x] = 'X';
-					slave_map[x]='*';
+					slave_map[x] = 'X';
 					print_matrix(START_POSITION, mask);
-					//remove_edges(mask, mapa, x);
-					//sendToSlave()
 					completed_ships++;
-					if (completed_ships == 20){
+					if (completed_ships == 20) {
 						sendToSlave('W');
-						while(1) {
+						while (1) {
 							set_cursor(550);
-							clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
+							clear_text_screen(
+									XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 							for (i = 0; i < 10; i++) {
 								if (i % 2 == 0) {
-									print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "WIN",
-											3);
+									print_string(
+											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
+											winner_s, 3);
 									VGA_PERIPH_MEM_mWriteMemory(
 											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
 											0x0000FF);			// foreground 4
 									VGA_PERIPH_MEM_mWriteMemory(
 											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
-											0xFFFFFF);			// background color 5
+											0xFFFFFF);	// background color 5
 									for (j = -2500000; j < 2500000; j++)
 										;
 								} else {
-									print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "WIN",
-											3);
+									print_string(
+											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
+											winner_s, 3);
 									VGA_PERIPH_MEM_mWriteMemory(
 											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
 											0xFFFFFF);			// foreground 4
 									VGA_PERIPH_MEM_mWriteMemory(
 											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
-											0x0000FF);			// background color 5
+											0x0000FF);	// background color 5
 									for (j = -2500000; j < 2500000; j++)
 										;
 								}
@@ -272,9 +264,6 @@ int main() {
 					}
 				}
 			}
-//			int k;
-			//for (k=-10000000; k<10000000; k++) {}
-//			my_turn = true;
 			clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 			print_matrix(START_POSITION, mask);
 			print_matrix(START_POSITION_LEFT, master_map);
@@ -284,171 +273,23 @@ int main() {
 			set_cursor(4228);
 			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
 					string_igrac, 7);
-			// TODO send some unique sign to slave
+
 			u8 flag = 0;
 			while (flag != '+') {
 				recvFromSlave(&flag);
 				if (flag == 'W') {
-					clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
+					clear_text_screen(
+							XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 					set_cursor(550);
-					while(1) {
-						print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "YOU LOSE", 8);
+					while (1) {
+						print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
+								loser_s, 8);
 					}
 				}
 			}
 			my_turn = true;
-			// sendToSlave(simbol);
 		}
-
-/*
-
-		for (i = 0; i < 10; i++) {
-			if (i % 2 == 0) {
-				print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "WIN",
-						3);
-				VGA_PERIPH_MEM_mWriteMemory(
-						XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
-						0x0000FF);			// foreground 4
-				VGA_PERIPH_MEM_mWriteMemory(
-						XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
-						0xFFFFFF);			// background color 5
-				for (j = -2500000; j < 2500000; j++)
-					;
-			} else {
-				print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, "WIN",
-						3);
-				VGA_PERIPH_MEM_mWriteMemory(
-						XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
-						0xFFFFFF);			// foreground 4
-				VGA_PERIPH_MEM_mWriteMemory(
-						XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
-						0x0000FF);			// background color 5
-				for (j = -2500000; j < 2500000; j++)
-					;
-			}
-		}
-*/
-// ------------------------------------------------------------------------------------
-		// cursor_temp_position sadrzi memorijsku lokaciju odabranog elementa
-		/*	clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
-		 set_cursor(368);
-		 print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_odabrali, 19);
-		 set_cursor(4228);
-		 print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
-
-		 switch(state){
-		 case UP_PRESSED :
-		 set_cursor(1030);
-		 print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_makaze, 6);
-		 simbol = 'M';
-		 break;
-		 case LEFT_PRESSED :
-		 set_cursor(1033);
-		 print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_papir, 5);
-		 simbol = 'P';
-		 break;
-		 case RIGHT_PRESSED :
-		 set_cursor(1033);
-		 print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_kamen, 5);
-		 simbol = 'K';
-		 break;
-		 case DOWN_PRESSED :
-		 break;
-		 case CENTER_PRESSED :
-		 break;
-		 case IDLE:
-		 break;
-		 }
-		 */
-
-		for (i = 0; i < 100000; i++) {
-
-		}
-
-		recvFromSlave(slavePtr);
-
-		slaveSym = slavePtr[0];
-
-		if (simbol == slaveSym) {
-			set_cursor(1668);
-			u8 rezultat[] = "NERESENO\n";
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
-					8);
-			winner = 0;
-		} else if (simbol == 'K' && slaveSym == 'P') {
-			set_cursor(1652);
-			u8 rezultat[] = "IGRAC 2 POBEDJUJE\n";
-			winner = 2;
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
-					17);
-		} else if (simbol == 'K' && slaveSym == 'M') {
-			set_cursor(1652);
-			winner = 1;
-			u8 rezultat[] = "IGRAC 1 POBEDJUJE\n";
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
-					17);
-		} else if (simbol == 'P' && slaveSym == 'M') {
-			set_cursor(1652);
-			winner = 2;
-			u8 rezultat[] = "IGRAC 2 POBEDJUJE\n";
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
-					17);
-		} else if (simbol == 'P' && slaveSym == 'K') {
-			set_cursor(1652);
-			winner = 1;
-			u8 rezultat[] = "IGRAC 1 POBEDJUJE\n";
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
-					17);
-		} else if (simbol == 'M' && slaveSym == 'K') {
-			set_cursor(1652);
-			winner = 2;
-			u8 rezultat[] = "IGRAC 2 POBEDJUJE\n";
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
-					17);
-		} else if (simbol == 'M' && slaveSym == 'P') {
-			set_cursor(1652);
-			winner = 1;
-			u8 rezultat[] = "IGRAC 1 POBEDJUJE\n";
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, rezultat,
-					17);
-		}
-
-		for (i = 0; i < 1000000; i++) {
-
-		}
-
-		sendToSlave(winner);
-
-		if (winner == 1) {
-			for (i = 0; i < 4; i++) {
-				if (i % 2 == 0) {
-					VGA_PERIPH_MEM_mWriteMemory(
-							XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
-							0x0000FF);		// foreground 4
-					VGA_PERIPH_MEM_mWriteMemory(
-							XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
-							0xFFFFFF);		// background color 5
-					for (j = -2500000; j < 2500000; j++)
-						;
-				} else {
-					VGA_PERIPH_MEM_mWriteMemory(
-							XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
-							0xFFFFFF);		// foreground 4
-					VGA_PERIPH_MEM_mWriteMemory(
-							XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
-							0x0000FF);		// background color 5
-					for (j = -2500000; j < 2500000; j++)
-						;
-				}
-			}
-		} else {
-			for (i = -10000000; i < 10000000; i++) {
-			}
-		}
-
-		i = 0;
 	}
-
 	return 0;
 }
 
@@ -780,22 +621,11 @@ int move_cursor(int cursor, state_t key_pressed) {
 
 void remove_edges(char* mask, char* map, int p) {
 
-	set_cursor(165);
-
-	int x = 0;
-	for (x = 0; x < 100; x++) {
-		if (p == x)
-			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, p);
-	}
-//    p==0 ? print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'Q') : print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'W');
-
 	bool horizontal, vertical, single;
 	bool right_edge, left_edge, up_edge, down_edge;
-	int upper, down, left, right;
-
-	int ship_size = 1;
-
 	bool left_up, left_down, right_down, right_up;
+	int upper, down, left, right;
+	int ship_size;
 
 	left_edge = (p % 10 == 0) ? true : false;
 	right_edge = (p % 10 == 9) ? true : false;
@@ -808,31 +638,47 @@ void remove_edges(char* mask, char* map, int p) {
 	right_up = right_edge && up_edge;
 
 	if (up_edge) {
-		vertical = (map[p] == '1' && (map[p + 10] == '1')) ? true : false;
+		vertical =
+				((map[p] == '1' || map[p] == 'X')
+						&& (map[p + 10] == '1' || map[p + 10] == 'X')) ?
+						true : false;
 	} else if (down_edge) {
-		vertical = (map[p] == '1' && (map[p - 10] == '1')) ? true : false;
+		vertical =
+				((map[p] == '1' || map[p] == 'X')
+						&& (map[p - 10] == '1' || map[p - 10] == 'X')) ?
+						true : false;
 	} else if (!(up_edge || down_edge)) {
 		vertical =
-				(map[p] == '1' && (map[p + 10] == '1' || map[p - 10] == '1')) ?
+				((map[p] == '1' || map[p] == 'X')
+						&& ((map[p + 10] == '1' || map[p + 10] == 'X')
+								|| (map[p - 10] == '1' || map[p - 10] == 'X'))) ?
 						true : false;
 	}
 
 	if (left_edge) {
-		horizontal = (map[p] == '1' && (map[p + 1] == '1')) ? true : false;
+		horizontal =
+				((map[p] == '1' || map[p] == 'X')
+						&& (map[p + 1] == '1' || map[p + 1] == 'X')) ?
+						true : false;
 	} else if (right_edge) {
-		horizontal = (map[p] == '1' && (map[p - 1] == '1')) ? true : false;
+		horizontal =
+				((map[p] == '1' || map[p] == 'X')
+						&& (map[p - 1] == '1' || map[p - 1] == 'X')) ?
+						true : false;
 	} else if (!(left_edge || right_edge)) {
 		horizontal =
-				(map[p] == '1' && (map[p + 1] == '1' || map[p - 1] == '1')) ?
+				((map[p] == '1' || map[p] == 'X')
+						&& ((map[p + 1] == '1' || map[p + 1] == 'X')
+								|| (map[p - 1] == '1' || map[p - 1] == 'X'))) ?
 						true : false;
 	}
 
 	single = (!horizontal) && (!vertical);
-
 	int temp = p;
+
 	if (horizontal) {
 		if (!right_edge) {
-			while (map[temp] == '1') {
+			while (map[temp] == '1' || map[temp] == 'X') {
 				right = temp;
 				temp += 1;
 			}
@@ -841,19 +687,20 @@ void remove_edges(char* mask, char* map, int p) {
 		}
 		temp = p;
 		if (!left_edge) {
-			while (map[temp] == '1') {
+			while (map[temp] == '1' || map[temp] == 'X') {
 				left = temp;
 				temp -= 1;
 			}
 		} else {
 			left = temp;
 		}
+		ship_size = right - left + 1;
 	}
 
 	temp = p;
 	if (vertical) {
 		if (!down_edge) {
-			while (map[temp] == '1') {
+			while (map[temp] == '1' || map[temp] == 'X') {
 				upper = temp;
 				temp -= 10;
 			}
@@ -863,7 +710,7 @@ void remove_edges(char* mask, char* map, int p) {
 
 		temp = p;
 		if (!up_edge) {
-			while (map[temp] == '1') {
+			while (map[temp] == '1' || map[temp] == 'X') {
 				down = temp;
 				temp += 10;
 			}
@@ -875,86 +722,532 @@ void remove_edges(char* mask, char* map, int p) {
 	temp = p;
 	if (single && map[p] == '1') {
 		if (!up_edge && !left_edge && !right_edge && !down_edge) {
-			set_cursor(161);
-			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'A');
-			mask[p - 11] = '+';
-			mask[p - 10] = '+';
-			mask[p - 9] = '+';
-			mask[p - 1] = '+';
-			mask[p + 1] = '+';
-			mask[p + 9] = '+';
-			mask[p + 10] = '+';
-			mask[p + 11] = '+';
+			mask[p - 11] = 'O';
+			mask[p - 10] = 'O';
+			mask[p - 9] = 'O';
+			mask[p - 1] = 'O';
+			mask[p + 1] = 'O';
+			mask[p + 9] = 'O';
+			mask[p + 10] = 'O';
+			mask[p + 11] = 'O';
+
+			map[p - 11] = 'O';
+			map[p - 10] = 'O';
+			map[p - 9] = 'O';
+			map[p - 1] = 'O';
+			map[p + 1] = 'O';
+			map[p + 9] = 'O';
+			map[p + 10] = 'O';
+			map[p + 11] = 'O';
 		}
 		if (left_up) {
-			set_cursor(161);
-			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'B');
-			mask[p + 1] = '+';
-			mask[p + 10] = '+';
-			mask[p + 11] = '+';
+			mask[p + 1] = 'O';
+			mask[p + 10] = 'O';
+			mask[p + 11] = 'O';
+
+			map[p + 1] = 'O';
+			map[p + 10] = 'O';
+			map[p + 11] = 'O';
 		}
 		if (right_up) {
-			set_cursor(161);
-			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'C');
-			mask[p - 1] = '+';
-			mask[p + 10] = '+';
-			mask[p + 9] = '+';
+			mask[p - 1] = 'O';
+			mask[p + 10] = 'O';
+			mask[p + 9] = 'O';
+
+			map[p - 1] = 'O';
+			map[p + 10] = 'O';
+			map[p + 9] = 'O';
 		}
 		if (left_down) {
-			set_cursor(161);
-			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'D');
-			mask[p - 10] = '+';
-			mask[p - 9] = '+';
-			mask[p + 1] = '+';
+			mask[p - 10] = 'O';
+			mask[p - 9] = 'O';
+			mask[p + 1] = 'O';
+
+			map[p - 10] = 'O';
+			map[p - 9] = 'O';
+			map[p + 1] = 'O';
 		}
 		if (right_down) {
-			set_cursor(161);
-			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'E');
-			mask[p - 11] = '+';
-			mask[p - 10] = '+';
-			mask[p - 1] = '+';
+			mask[p - 11] = 'O';
+			mask[p - 10] = 'O';
+			mask[p - 1] = 'O';
+
+			map[p - 11] = 'O';
+			map[p - 10] = 'O';
+			map[p - 1] = 'O';
 		}
 		if (left_edge && !up_edge && !down_edge) {
-			set_cursor(161);
-			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'F');
-			mask[p + 1] = '+';
-			mask[p + 10] = '+';
-			mask[p + 11] = '+';
-			mask[p - 10] = '+';
-			mask[p - 9] = '+';
+			mask[p + 1] = 'O';
+			mask[p + 10] = 'O';
+			mask[p + 11] = 'O';
+			mask[p - 10] = 'O';
+			mask[p - 9] = 'O';
+
+			map[p + 1] = 'O';
+			map[p + 10] = 'O';
+			map[p + 11] = 'O';
+			map[p - 10] = 'O';
+			map[p - 9] = 'O';
 		}
 		if (right_edge && !up_edge && !down_edge) {
-			set_cursor(161);
-			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'G');
-			mask[p - 1] = '+';
-			mask[p + 10] = '+';
-			mask[p + 9] = '+';
-			mask[p - 11] = '+';
-			mask[p - 10] = '+';
+			mask[p - 1] = 'O';
+			mask[p + 10] = 'O';
+			mask[p + 9] = 'O';
+			mask[p - 11] = 'O';
+			mask[p - 10] = 'O';
+
+			map[p - 1] = 'O';
+			map[p + 10] = 'O';
+			map[p + 9] = 'O';
+			map[p - 11] = 'O';
+			map[p - 10] = 'O';
 		}
 		if (up_edge && !right_edge && !left_edge) {
-			set_cursor(161);
-			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'H');
-			mask[p + 1] = '+';
-			mask[p + 10] = '+';
-			mask[p + 11] = '+';
-			mask[p - 1] = '+';
-			mask[p + 9] = '+';
+			mask[p + 1] = 'O';
+			mask[p + 10] = 'O';
+			mask[p + 11] = 'O';
+			mask[p - 1] = 'O';
+			mask[p + 9] = 'O';
+
+			map[p + 1] = 'O';
+			map[p + 10] = 'O';
+			map[p + 11] = 'O';
+			map[p - 1] = 'O';
+			map[p + 9] = 'O';
 		}
 		if (down_edge && !left_edge && !right_edge) {
-			set_cursor(161);
-			print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'I');
-			mask[p + 1] = '+';
-			mask[p - 1] = '+';
-			mask[p - 9] = '+';
-			mask[p - 11] = '+';
-			mask[p - 10] = '+';
+			mask[p + 1] = 'O';
+			mask[p - 1] = 'O';
+			mask[p - 9] = 'O';
+			mask[p - 11] = 'O';
+			mask[p - 10] = 'O';
+
+			map[p + 1] = 'O';
+			map[p - 1] = 'O';
+			map[p - 9] = 'O';
+			map[p - 11] = 'O';
+			map[p - 10] = 'O';
 		}
-	} else {
-		set_cursor(161);
-		print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, 'P');
 	}
 
+	bool completed = true;
+	if (vertical) {
+		completed = true;
+		int t = upper;
+		for (t = upper; t <= down; t += 10) {
+			if (map[t] == '1') {
+				completed = false;
+			}
+		}
+
+		left_edge = (upper % 10 == 0) ? true : false;
+		right_edge = (upper % 10 == 9) ? true : false;
+		down_edge = (down > 90) ? true : false;
+		up_edge = (upper <= 9) ? true : false;
+
+		left_up = left_edge && up_edge;
+		left_down = left_edge && down_edge;
+		right_down = right_edge && down_edge;
+		right_up = right_edge && up_edge;
+
+		if (completed) {
+			if (!up_edge && !left_edge && !right_edge && !down_edge) {
+				map[upper - 1] = 'k';
+				map[upper - 11] = 'k';
+				map[upper - 10] = 'k';
+				map[upper - 9] = 'k';
+				map[upper + 1] = 'k';
+				map[down + 10] = 'k';
+				map[down + 11] = 'k';
+				map[down + 9] = 'k';
+				map[down + 1] = 'k';
+				map[down - 1] = 'k';
+
+				mask[upper - 1] = 'k';
+				mask[upper - 11] = 'k';
+				mask[upper - 10] = 'k';
+				mask[upper - 9] = 'k';
+				mask[upper + 1] = 'k';
+				mask[down + 10] = 'k';
+				mask[down + 11] = 'k';
+				mask[down + 9] = 'k';
+				mask[down + 1] = 'k';
+				mask[down - 1] = 'k';
+
+				for (t = upper; t < down; t += 10) {
+					mask[t + 1] = 'k';
+					mask[t - 1] = 'k';
+					map[t + 1] = 'k';
+					map[t - 1] = 'k';
+				}
+			}
+			if (left_up) {
+				map[upper + 1] = 'k';
+				map[down + 1] = 'k';
+				map[down + 10] = 'k';
+				map[down + 11] = 'k';
+
+				mask[upper + 1] = 'k';
+				mask[down + 1] = 'k';
+				mask[down + 10] = 'k';
+				mask[down + 11] = 'k';
+
+				for (t = upper; t < down; t += 10) {
+					mask[t + 1] = 'k';
+					map[t + 1] = 'k';
+				}
+			}
+			if (right_up) {
+				map[upper - 1] = 'k';
+				map[down + 10] = 'k';
+				map[down + 9] = 'k';
+				map[down - 1] = 'k';
+
+				mask[upper - 1] = 'k';
+				mask[down + 10] = 'k';
+				mask[down + 9] = 'k';
+				mask[down - 1] = 'k';
+
+				for (t = upper; t < down; t += 10) {
+					mask[t - 1] = 'k';
+					map[t - 1] = 'k';
+				}
+			}
+			if (left_down) {
+				map[upper - 10] = 'k';
+				map[upper - 9] = 'k';
+				map[upper + 1] = 'k';
+				map[down + 1] = 'k';
+
+				mask[upper - 10] = 'k';
+				mask[upper - 9] = 'k';
+				mask[upper + 1] = 'k';
+				mask[down + 1] = 'k';
+
+				for (t = upper; t < down; t += 10) {
+					mask[t + 1] = 'k';
+					map[t + 1] = 'k';
+				}
+			}
+			if (right_down) {
+				mask[upper - 11] = 'k';
+				mask[upper - 10] = 'k';
+				mask[upper - 1] = 'k';
+				mask[down - 1] = 'k';
+
+				map[upper - 11] = 'k';
+				map[upper - 10] = 'k';
+				map[upper - 1] = 'k';
+				map[down - 1] = 'k';
+
+				for (t = upper; t < down; t += 10) {
+					mask[t - 1] = 'k';
+					map[t - 1] = 'k';
+				}
+			}
+			if (left_edge && !up_edge && !down_edge) {
+				map[upper + 1] = 'k';
+				map[upper - 10] = 'k';
+				map[upper - 9] = 'k';
+				map[down + 10] = 'k';
+				map[down + 11] = 'k';
+				map[down + 1] = 'k';
+
+				mask[upper + 1] = 'k';
+				mask[upper - 10] = 'k';
+				mask[upper - 9] = 'k';
+				mask[down + 10] = 'k';
+				mask[down + 11] = 'k';
+				mask[down + 1] = 'k';
+
+				for (t = upper; t < down; t += 10) {
+					map[t + 1] = 'k';
+					mask[t + 1] = 'k';
+				}
+			}
+			if (right_edge && !up_edge && !down_edge) {
+				map[upper - 1] = 'k';
+				map[upper - 11] = 'k';
+				map[upper - 10] = 'k';
+				map[down - 1] = 'k';
+				map[down + 10] = 'k';
+				map[down + 9] = 'k';
+
+				mask[upper - 1] = 'k';
+				mask[upper - 11] = 'k';
+				mask[upper - 10] = 'k';
+				mask[down - 1] = 'k';
+				mask[down + 10] = 'k';
+				mask[down + 9] = 'k';
+
+				for (t = upper; t < down; t += 10) {
+					mask[t - 1] = 'k';
+					map[t - 1] = 'k';
+				}
+			}
+			if (up_edge && !right_edge && !left_edge) {
+				map[upper + 1] = 'k';
+				map[upper - 1] = 'k';
+				map[down + 1] = 'k';
+				map[down - 1] = 'k';
+				map[down + 10] = 'k';
+				map[down + 11] = 'k';
+				map[down + 9] = 'k';
+
+				mask[upper + 1] = 'k';
+				mask[upper - 1] = 'k';
+				mask[down + 1] = 'k';
+				mask[down - 1] = 'k';
+				mask[down + 10] = 'k';
+				mask[down + 11] = 'k';
+				mask[down + 9] = 'k';
+
+				for (t = upper; t < down; t += 10) {
+					map[t + 1] = 'k';
+					map[t - 1] = 'k';
+
+					mask[t + 1] = 'k';
+					mask[t - 1] = 'k';
+				}
+			}
+			if (down_edge && !left_edge && !right_edge) {
+				map[upper + 1] = 'k';
+				map[upper - 1] = 'k';
+				map[upper - 9] = 'k';
+				map[upper - 11] = 'k';
+				map[upper - 10] = 'k';
+				map[down + 1] = 'k';
+				map[down - 1] = 'k';
+
+				mask[upper + 1] = 'k';
+				mask[upper - 1] = 'k';
+				mask[upper - 9] = 'k';
+				mask[upper - 11] = 'k';
+				mask[upper - 10] = 'k';
+				mask[down + 1] = 'k';
+				mask[down - 1] = 'k';
+
+				for (t = upper; t < down; t += 10) {
+					map[t + 1] = 'k';
+					map[t - 1] = 'k';
+
+					mask[t + 1] = 'k';
+					mask[t - 1] = 'k';
+				}
+			}
+		}
+	}
+	if (horizontal) {
+		completed = true;
+		int t = left;
+		for (t = left; t<=right; t++) {
+			if (map[t]=='1') {
+				completed = false;
+			}
+		}
+
+		if (completed) {
+            left_edge = (left%10==0) ? true : false;
+            right_edge = (right%10==9) ? true : false;
+            down_edge = (left>90) ? true : false;
+            up_edge = (left<=9) ? true : false;
+
+            left_up = left_edge && up_edge;
+            left_down = left_edge && down_edge;
+            right_down = right_edge && down_edge;
+            right_up = right_edge && up_edge;
+
+            if (!up_edge && !left_edge && !right_edge && !down_edge) {
+            	map[left-1]='k';
+				map[left-11]='k';
+				map[left-10]='k';
+				map[left+9]='k';
+				map[left+10]='k';
+				map[right-10]='k';
+				map[right-9]='k';
+				map[right+1]='k';
+				map[right+10]='k';
+				map[right+11]='k';
+
+				mask[left-1]='k';
+				mask[left-11]='k';
+				mask[left-10]='k';
+				mask[left+9]='k';
+				mask[left+10]='k';
+				mask[right-10]='k';
+				mask[right-9]='k';
+				mask[right+1]='k';
+				mask[right+10]='k';
+				mask[right+11]='k';
+
+				for (t=left+1; t<right; t++) {
+					map[t+10]='k';
+					map[t-10]='k';
+
+					mask[t+10]='k';
+					mask[t-10]='k';
+				}
+            }
+           if (left_up) {
+				map[right+1]='k';
+				map[right+10]='k';
+				map[right+11]='k';
+				map[left+10]='k';
+
+				mask[right+1]='k';
+				mask[right+10]='k';
+				mask[right+11]='k';
+				mask[left+10]='k';
+
+				for (t=left+1; t<right; t++) {
+					map[t+10]='k';
+					mask[t+10]='k';
+				}
+			}
+
+            if (right_up) {
+                map[left-1]='k';
+                map[left+10]='k';
+                map[left+9]='k';
+                map[right+10]='k';
+
+                mask[left-1]='k';
+				mask[left+10]='k';
+				mask[left+9]='k';
+				mask[right+10]='k';
+
+                for (t=left+1; t<right; t++) {
+                    mask[t+10]='k';
+                    map[t+10]='k';
+                }
+            }
+
+            if (left_down) {
+                map[right-10]='k';
+                map[right-9]='k';
+                map[right+1]='k';
+                map[left-10]='k';
+
+                mask[right-10]='k';
+                mask[right-9]='k';
+                mask[right+1]='k';
+                mask[left-10]='k';
+
+                for (t=left+1; t<right; t++) {
+                    map[t-10]='k';
+                    mask[t-10]='k';
+                }
+            }
+            if (right_down) {
+			   map[left-11]='k';
+			   map[left-10]='k';
+			   map[left-1]='k';
+			   map[right-10]='k';
+
+			   mask[left-11]='k';
+			   mask[left-10]='k';
+			   mask[left-1]='k';
+			   mask[right-10]='k';
+
+			   for (t=left+1; t<right; t++) {
+				   mask[t-10]='k';
+				   map[t-10]='k';
+			   }
+
+		   }
+		   if (left_edge && !up_edge && !down_edge) {
+			   map[left-10]='k';
+			   map[left+10]='k';
+			   map[right-10]='k';
+			   map[right+10]='k';
+			   map[right+1]='k';
+			   map[right+11]='k';
+			   map[right-9]='k';
+
+			   mask[left-10]='k';
+			   mask[left+10]='k';
+			   mask[right-10]='k';
+			   mask[right+10]='k';
+			   mask[right+1]='k';
+			   mask[right+11]='k';
+			   mask[right-9]='k';
+
+			   for (t=left+1; t<right; t++) {
+				   mask[t+10]='k';
+				   mask[t-10]='k';
+
+				   map[t+10]='k';
+				   map[t-10]='k';
+			   }
+		   }
+		   if (right_edge && !up_edge && !down_edge) {
+			   map[left-1]='k';
+			   map[left+9]='k';
+			   map[left-11]='k';
+			   map[left-10]='k';
+			   map[left+10]='k';
+			   map[right-10]='k';
+			   map[right+10]='k';
+
+			   mask[left-1]='k';
+			   mask[left+9]='k';
+			   mask[left-11]='k';
+			   mask[left-10]='k';
+			   mask[left+10]='k';
+			   mask[right-10]='k';
+			   mask[right+10]='k';
+
+			   for (t=left+1; t<right; t++) {
+				   map[t+10]='k';
+				   map[t-10]='k';
+
+				   mask[t+10]='k';
+				   mask[t-10]='k';
+			   }
+		   }
+		   if (up_edge && !right_edge && !left_edge) {
+			   map[left-1]='k';
+			   map[left+9]='k';
+			   map[left+10]='k';
+			   map[right+10]='k';
+			   map[right+1]='k';
+			   map[right+11]='k';
+
+			   mask[left-1]='k';
+			   mask[left+9]='k';
+			   mask[left+10]='k';
+			   mask[right+10]='k';
+			   mask[right+1]='k';
+			   mask[right+11]='k';
+
+			   for (t=left; t<right; t++) {
+				   mask[t+10]='k';
+				   map[t+10]='k';
+			   }
+		   }
+		   if (down_edge && !left_edge && !right_edge) {
+			   mask[left-1]='k';
+			   mask[left-11]='k';
+			   mask[left-10]='k';
+			   mask[right+1]='k';
+			   mask[right-9]='k';
+			   mask[right-10]='k';
+
+			   map[left-1]='k';
+			   map[left-11]='k';
+			   map[left-10]='k';
+			   map[right+1]='k';
+			   map[right-9]='k';
+			   map[right-10]='k';
+
+
+			   for (t=left+1; t<right; t++) {
+				   map[t-10]='k';
+				   mask[t-10]='k';
+			   }
+		   }
+		}
+	}
 	print_matrix(START_POSITION, mask);
 
 }
