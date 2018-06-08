@@ -125,29 +125,44 @@ volatile u8 BusNotBusy;
 
 unsigned char string_s[] = "POTAPANJE BRODICA\n";
 unsigned char string_igrac[] = "IGRAC 1";
-unsigned char winner_s[] = "WIN\n";
-unsigned char loser_s[] = "LOSE\n";
+unsigned char winner_s[] = "WINNER\n";
+unsigned char loser_s[] = "LOSER\n";
+unsigned char press_s[] = "PRITISNI SELECT";
+
 
 
 int main() {
 
+	state_t key = IDLE;
 	int completed_ships = 0;
 
-	init_platform();
 	int Status;
 	u8 slavePtr[2];
 
-	int i;
+	int i, frame_c = 0;
 	int j;
 	int set_cursor_here = START_POSITION;
+
+	init_platform();
 
 	Status = initIICMaster(IIC_DEVICE_ID, SLAVE_ADDRESS);
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
 	}
-
+/*
+	while (key != CENTER_PRESSED) {
+		key = detect_keypress();
+		set_cursor(2393);
+		for (j = 0; j < 1000000; j++) {}
+		frame_c++;
+		if (frame_c % 10 > 5) {
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, press_s, sizeof(press_s)/sizeof(char)-1);
+		} else {
+			clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
+		}
+	}
+*/
 	while (1) {
-
 		VGA_PERIPH_MEM_mWriteMemory(
 				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x00, 0x0); // direct mode   0
 		VGA_PERIPH_MEM_mWriteMemory(
@@ -160,8 +175,7 @@ int main() {
 				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0xFFFFFF); // foreground 4
 		VGA_PERIPH_MEM_mWriteMemory(
 				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0x0000FF); // background color 5
-		VGA_PERIPH_MEM_mWriteMemory(
-				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x18, 0xFF0000); // frame color      6
+		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x18, 0xFF0000); // frame color      6
 
 		clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 		clear_graphics_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
@@ -169,14 +183,14 @@ int main() {
 		int random = rand() % 10;
 		char* master_map = all_maps[random];
 
-
 		sendToSlave(random);
 		set_cursor(220);
 		set_cursor(368);
 		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s, 17);
 
 		set_cursor(4228);
-		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac, 7);
+		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac,
+				7);
 		recvFromSlave(slavePtr);
 		int slave_number = (int) slavePtr[0];
 		set_cursor(228);
@@ -191,7 +205,7 @@ int main() {
 		bool my_turn = true;
 		while (completed_ships < 20) {
 			while (my_turn) {
-				state_t key = IDLE;
+				key = IDLE;
 				while (key != CENTER_PRESSED) {
 					key = detect_keypress();
 					int j = 0;
@@ -210,29 +224,29 @@ int main() {
 
 				int x = get_mem_loc_from_cursor(set_cursor_here);
 
-
 				if (slave_map[x] == '0') {
 					mask[x] = 'O';
 					slave_map[x] = 'O';
 					my_turn = false;
 					sendToSlave('+');
 				} else if (slave_map[x] == '1') {
-					remove_edges(mask, slave_map, x);
+
 					mask[x] = 'X';
 					slave_map[x] = 'X';
 					print_matrix(START_POSITION, mask);
+					remove_edges(mask, slave_map, x);
 					completed_ships++;
 					if (completed_ships == 20) {
 						sendToSlave('W');
 						while (1) {
-							set_cursor(550);
+							set_cursor(555);
 							clear_text_screen(
 									XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 							for (i = 0; i < 10; i++) {
 								if (i % 2 == 0) {
 									print_string(
 											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-											winner_s, 3);
+											winner_s, 6);
 									VGA_PERIPH_MEM_mWriteMemory(
 											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
 											0x0000FF);			// foreground 4
@@ -244,7 +258,7 @@ int main() {
 								} else {
 									print_string(
 											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-											winner_s, 3);
+											winner_s, 6);
 									VGA_PERIPH_MEM_mWriteMemory(
 											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
 											0xFFFFFF);			// foreground 4
@@ -276,7 +290,7 @@ int main() {
 				if (flag == 'W') {
 					clear_text_screen(
 							XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
-					set_cursor(550);
+					set_cursor(556);
 					while (1) {
 						print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
 								loser_s, 8);
@@ -571,7 +585,6 @@ state_t detect_keypress() {
 	return state;
 }
 
-
 int get_cursor_from_mem(int mem_location) {
 	int cursor_x, cursor_y;
 	cursor_y = mem_location / 10;
@@ -586,7 +599,6 @@ int get_mem_loc_from_cursor(int cursor_pos) {
 	mem_x = cursor_pos % 40 / 4;
 	return mem_y * 10 + mem_x;
 }
-
 
 int move_cursor(int cursor, state_t key_pressed) {
 	bool right_edge, left_edge, up_edge, down_edge;
@@ -618,7 +630,6 @@ void remove_edges(char* mask, char* map, int p) {
 	bool right_edge, left_edge, up_edge, down_edge;
 	bool left_up, left_down, right_down, right_up;
 	int upper, down, left, right;
-
 
 	left_edge = (p % 10 == 0) ? true : false;
 	right_edge = (p % 10 == 9) ? true : false;
@@ -669,7 +680,7 @@ void remove_edges(char* mask, char* map, int p) {
 	single = (!horizontal) && (!vertical);
 	int temp = p;
 
-	if (horizontal) {
+	if (horizontal || single) {
 		if (!right_edge) {
 			while (map[temp] == '1' || map[temp] == 'X') {
 				right = temp;
@@ -712,115 +723,6 @@ void remove_edges(char* mask, char* map, int p) {
 	}
 
 	temp = p;
-	if (single && map[p] == '1') {
-		if (!up_edge && !left_edge && !right_edge && !down_edge) {
-			mask[p - 11] = 'O';
-			mask[p - 10] = 'O';
-			mask[p - 9] = 'O';
-			mask[p - 1] = 'O';
-			mask[p + 1] = 'O';
-			mask[p + 9] = 'O';
-			mask[p + 10] = 'O';
-			mask[p + 11] = 'O';
-
-			map[p - 11] = 'O';
-			map[p - 10] = 'O';
-			map[p - 9] = 'O';
-			map[p - 1] = 'O';
-			map[p + 1] = 'O';
-			map[p + 9] = 'O';
-			map[p + 10] = 'O';
-			map[p + 11] = 'O';
-		}
-		if (left_up) {
-			mask[p + 1] = 'O';
-			mask[p + 10] = 'O';
-			mask[p + 11] = 'O';
-
-			map[p + 1] = 'O';
-			map[p + 10] = 'O';
-			map[p + 11] = 'O';
-		}
-		if (right_up) {
-			mask[p - 1] = 'O';
-			mask[p + 10] = 'O';
-			mask[p + 9] = 'O';
-
-			map[p - 1] = 'O';
-			map[p + 10] = 'O';
-			map[p + 9] = 'O';
-		}
-		if (left_down) {
-			mask[p - 10] = 'O';
-			mask[p - 9] = 'O';
-			mask[p + 1] = 'O';
-
-			map[p - 10] = 'O';
-			map[p - 9] = 'O';
-			map[p + 1] = 'O';
-		}
-		if (right_down) {
-			mask[p - 11] = 'O';
-			mask[p - 10] = 'O';
-			mask[p - 1] = 'O';
-
-			map[p - 11] = 'O';
-			map[p - 10] = 'O';
-			map[p - 1] = 'O';
-		}
-		if (left_edge && !up_edge && !down_edge) {
-			mask[p + 1] = 'O';
-			mask[p + 10] = 'O';
-			mask[p + 11] = 'O';
-			mask[p - 10] = 'O';
-			mask[p - 9] = 'O';
-
-			map[p + 1] = 'O';
-			map[p + 10] = 'O';
-			map[p + 11] = 'O';
-			map[p - 10] = 'O';
-			map[p - 9] = 'O';
-		}
-		if (right_edge && !up_edge && !down_edge) {
-			mask[p - 1] = 'O';
-			mask[p + 10] = 'O';
-			mask[p + 9] = 'O';
-			mask[p - 11] = 'O';
-			mask[p - 10] = 'O';
-
-			map[p - 1] = 'O';
-			map[p + 10] = 'O';
-			map[p + 9] = 'O';
-			map[p - 11] = 'O';
-			map[p - 10] = 'O';
-		}
-		if (up_edge && !right_edge && !left_edge) {
-			mask[p + 1] = 'O';
-			mask[p + 10] = 'O';
-			mask[p + 11] = 'O';
-			mask[p - 1] = 'O';
-			mask[p + 9] = 'O';
-
-			map[p + 1] = 'O';
-			map[p + 10] = 'O';
-			map[p + 11] = 'O';
-			map[p - 1] = 'O';
-			map[p + 9] = 'O';
-		}
-		if (down_edge && !left_edge && !right_edge) {
-			mask[p + 1] = 'O';
-			mask[p - 1] = 'O';
-			mask[p - 9] = 'O';
-			mask[p - 11] = 'O';
-			mask[p - 10] = 'O';
-
-			map[p + 1] = 'O';
-			map[p - 1] = 'O';
-			map[p - 9] = 'O';
-			map[p - 11] = 'O';
-			map[p - 10] = 'O';
-		}
-	}
 
 	bool completed = true;
 	if (vertical) {
@@ -1029,215 +931,214 @@ void remove_edges(char* mask, char* map, int p) {
 			}
 		}
 	}
-	if (horizontal) {
+	if (horizontal || single) {
 		completed = true;
 		int t = left;
-		for (t = left; t<=right; t++) {
-			if (map[t]=='1') {
+		for (t = left; t <= right; t++) {
+			if (map[t] == '1') {
 				completed = false;
 			}
 		}
 
 		if (completed) {
-            left_edge = (left%10==0) ? true : false;
-            right_edge = (right%10==9) ? true : false;
-            down_edge = (left>90) ? true : false;
-            up_edge = (left<=9) ? true : false;
+			left_edge = (left % 10 == 0) ? true : false;
+			right_edge = (right % 10 == 9) ? true : false;
+			down_edge = (left > 90) ? true : false;
+			up_edge = (left <= 9) ? true : false;
 
-            left_up = left_edge && up_edge;
-            left_down = left_edge && down_edge;
-            right_down = right_edge && down_edge;
-            right_up = right_edge && up_edge;
+			left_up = left_edge && up_edge;
+			left_down = left_edge && down_edge;
+			right_down = right_edge && down_edge;
+			right_up = right_edge && up_edge;
 
-            if (!up_edge && !left_edge && !right_edge && !down_edge) {
-            	map[left-1]='O';
-				map[left-11]='O';
-				map[left-10]='O';
-				map[left+9]='O';
-				map[left+10]='O';
-				map[right-10]='O';
-				map[right-9]='O';
-				map[right+1]='O';
-				map[right+10]='O';
-				map[right+11]='O';
+			if (!up_edge && !left_edge && !right_edge && !down_edge) {
+				map[left - 1] = 'O';
+				map[left - 11] = 'O';
+				map[left - 10] = 'O';
+				map[left + 9] = 'O';
+				map[left + 10] = 'O';
+				map[right - 10] = 'O';
+				map[right - 9] = 'O';
+				map[right + 1] = 'O';
+				map[right + 10] = 'O';
+				map[right + 11] = 'O';
 
-				mask[left-1]='O';
-				mask[left-11]='O';
-				mask[left-10]='O';
-				mask[left+9]='O';
-				mask[left+10]='O';
-				mask[right-10]='O';
-				mask[right-9]='O';
-				mask[right+1]='O';
-				mask[right+10]='O';
-				mask[right+11]='O';
+				mask[left - 1] = 'O';
+				mask[left - 11] = 'O';
+				mask[left - 10] = 'O';
+				mask[left + 9] = 'O';
+				mask[left + 10] = 'O';
+				mask[right - 10] = 'O';
+				mask[right - 9] = 'O';
+				mask[right + 1] = 'O';
+				mask[right + 10] = 'O';
+				mask[right + 11] = 'O';
 
-				for (t=left+1; t<right; t++) {
-					map[t+10]='O';
-					map[t-10]='O';
+				for (t = left + 1; t < right; t++) {
+					map[t + 10] = 'O';
+					map[t - 10] = 'O';
 
-					mask[t+10]='O';
-					mask[t-10]='O';
+					mask[t + 10] = 'O';
+					mask[t - 10] = 'O';
 				}
-            }
-           if (left_up) {
-				map[right+1]='O';
-				map[right+10]='O';
-				map[right+11]='O';
-				map[left+10]='O';
+			}
+			if (left_up) {
+				map[right + 1] = 'O';
+				map[right + 10] = 'O';
+				map[right + 11] = 'O';
+				map[left + 10] = 'O';
 
-				mask[right+1]='O';
-				mask[right+10]='O';
-				mask[right+11]='O';
-				mask[left+10]='O';
+				mask[right + 1] = 'O';
+				mask[right + 10] = 'O';
+				mask[right + 11] = 'O';
+				mask[left + 10] = 'O';
 
-				for (t=left+1; t<right; t++) {
-					map[t+10]='O';
-					mask[t+10]='O';
+				for (t = left + 1; t < right; t++) {
+					map[t + 10] = 'O';
+					mask[t + 10] = 'O';
 				}
 			}
 
-            if (right_up) {
-                map[left-1]='O';
-                map[left+10]='O';
-                map[left+9]='O';
-                map[right+10]='O';
+			if (right_up) {
+				map[left - 1] = 'O';
+				map[left + 10] = 'O';
+				map[left + 9] = 'O';
+				map[right + 10] = 'O';
 
-                mask[left-1]='O';
-				mask[left+10]='O';
-				mask[left+9]='O';
-				mask[right+10]='O';
+				mask[left - 1] = 'O';
+				mask[left + 10] = 'O';
+				mask[left + 9] = 'O';
+				mask[right + 10] = 'O';
 
-                for (t=left+1; t<right; t++) {
-                    mask[t+10]='O';
-                    map[t+10]='O';
-                }
-            }
+				for (t = left + 1; t < right; t++) {
+					mask[t + 10] = 'O';
+					map[t + 10] = 'O';
+				}
+			}
 
-            if (left_down) {
-                map[right-10]='O';
-                map[right-9]='O';
-                map[right+1]='O';
-                map[left-10]='O';
+			if (left_down) {
+				map[right - 10] = 'O';
+				map[right - 9] = 'O';
+				map[right + 1] = 'O';
+				map[left - 10] = 'O';
 
-                mask[right-10]='O';
-                mask[right-9]='O';
-                mask[right+1]='O';
-                mask[left-10]='O';
+				mask[right - 10] = 'O';
+				mask[right - 9] = 'O';
+				mask[right + 1] = 'O';
+				mask[left - 10] = 'O';
 
-                for (t=left+1; t<right; t++) {
-                    map[t-10]='O';
-                    mask[t-10]='O';
-                }
-            }
-            if (right_down) {
-			   map[left-11]='O';
-			   map[left-10]='O';
-			   map[left-1]='O';
-			   map[right-10]='O';
+				for (t = left + 1; t < right; t++) {
+					map[t - 10] = 'O';
+					mask[t - 10] = 'O';
+				}
+			}
+			if (right_down) {
+				map[left - 11] = 'O';
+				map[left - 10] = 'O';
+				map[left - 1] = 'O';
+				map[right - 10] = 'O';
 
-			   mask[left-11]='O';
-			   mask[left-10]='O';
-			   mask[left-1]='O';
-			   mask[right-10]='O';
+				mask[left - 11] = 'O';
+				mask[left - 10] = 'O';
+				mask[left - 1] = 'O';
+				mask[right - 10] = 'O';
 
-			   for (t=left+1; t<right; t++) {
-				   mask[t-10]='O';
-				   map[t-10]='O';
-			   }
+				for (t = left + 1; t < right; t++) {
+					mask[t - 10] = 'O';
+					map[t - 10] = 'O';
+				}
 
-		   }
-		   if (left_edge && !up_edge && !down_edge) {
-			   map[left-10]='O';
-			   map[left+10]='O';
-			   map[right-10]='O';
-			   map[right+10]='O';
-			   map[right+1]='O';
-			   map[right+11]='O';
-			   map[right-9]='O';
+			}
+			if (left_edge && !up_edge && !down_edge) {
+				map[left - 10] = 'O';
+				map[left + 10] = 'O';
+				map[right - 10] = 'O';
+				map[right + 10] = 'O';
+				map[right + 1] = 'O';
+				map[right + 11] = 'O';
+				map[right - 9] = 'O';
 
-			   mask[left-10]='O';
-			   mask[left+10]='O';
-			   mask[right-10]='O';
-			   mask[right+10]='O';
-			   mask[right+1]='O';
-			   mask[right+11]='O';
-			   mask[right-9]='O';
+				mask[left - 10] = 'O';
+				mask[left + 10] = 'O';
+				mask[right - 10] = 'O';
+				mask[right + 10] = 'O';
+				mask[right + 1] = 'O';
+				mask[right + 11] = 'O';
+				mask[right - 9] = 'O';
 
-			   for (t=left+1; t<right; t++) {
-				   mask[t+10]='O';
-				   mask[t-10]='O';
+				for (t = left + 1; t < right; t++) {
+					mask[t + 10] = 'O';
+					mask[t - 10] = 'O';
 
-				   map[t+10]='O';
-				   map[t-10]='O';
-			   }
-		   }
-		   if (right_edge && !up_edge && !down_edge) {
-			   map[left-1]='O';
-			   map[left+9]='O';
-			   map[left-11]='O';
-			   map[left-10]='O';
-			   map[left+10]='O';
-			   map[right-10]='O';
-			   map[right+10]='O';
+					map[t + 10] = 'O';
+					map[t - 10] = 'O';
+				}
+			}
+			if (right_edge && !up_edge && !down_edge) {
+				map[left - 1] = 'O';
+				map[left + 9] = 'O';
+				map[left - 11] = 'O';
+				map[left - 10] = 'O';
+				map[left + 10] = 'O';
+				map[right - 10] = 'O';
+				map[right + 10] = 'O';
 
-			   mask[left-1]='O';
-			   mask[left+9]='O';
-			   mask[left-11]='O';
-			   mask[left-10]='O';
-			   mask[left+10]='O';
-			   mask[right-10]='O';
-			   mask[right+10]='O';
+				mask[left - 1] = 'O';
+				mask[left + 9] = 'O';
+				mask[left - 11] = 'O';
+				mask[left - 10] = 'O';
+				mask[left + 10] = 'O';
+				mask[right - 10] = 'O';
+				mask[right + 10] = 'O';
 
-			   for (t=left+1; t<right; t++) {
-				   map[t+10]='O';
-				   map[t-10]='O';
+				for (t = left + 1; t < right; t++) {
+					map[t + 10] = 'O';
+					map[t - 10] = 'O';
 
-				   mask[t+10]='O';
-				   mask[t-10]='O';
-			   }
-		   }
-		   if (up_edge && !right_edge && !left_edge) {
-			   map[left-1]='O';
-			   map[left+9]='O';
-			   map[left+10]='O';
-			   map[right+10]='O';
-			   map[right+1]='O';
-			   map[right+11]='O';
+					mask[t + 10] = 'O';
+					mask[t - 10] = 'O';
+				}
+			}
+			if (up_edge && !right_edge && !left_edge) {
+				map[left - 1] = 'O';
+				map[left + 9] = 'O';
+				map[left + 10] = 'O';
+				map[right + 10] = 'O';
+				map[right + 1] = 'O';
+				map[right + 11] = 'O';
 
-			   mask[left-1]='O';
-			   mask[left+9]='O';
-			   mask[left+10]='O';
-			   mask[right+10]='O';
-			   mask[right+1]='O';
-			   mask[right+11]='O';
+				mask[left - 1] = 'O';
+				mask[left + 9] = 'O';
+				mask[left + 10] = 'O';
+				mask[right + 10] = 'O';
+				mask[right + 1] = 'O';
+				mask[right + 11] = 'O';
 
-			   for (t=left; t<right; t++) {
-				   mask[t+10]='O';
-				   map[t+10]='O';
-			   }
-		   }
-		   if (down_edge && !left_edge && !right_edge) {
-			   mask[left-1]='O';
-			   mask[left-11]='O';
-			   mask[left-10]='O';
-			   mask[right+1]='O';
-			   mask[right-9]='O';
-			   mask[right-10]='O';
+				for (t = left; t < right; t++) {
+					mask[t + 10] = 'O';
+					map[t + 10] = 'O';
+				}
+			}
+			if (down_edge && !left_edge && !right_edge) {
+				mask[left - 1] = 'O';
+				mask[left - 11] = 'O';
+				mask[left - 10] = 'O';
+				mask[right + 1] = 'O';
+				mask[right - 9] = 'O';
+				mask[right - 10] = 'O';
 
-			   map[left-1]='O';
-			   map[left-11]='O';
-			   map[left-10]='O';
-			   map[right+1]='O';
-			   map[right-9]='O';
-			   map[right-10]='O';
+				map[left - 1] = 'O';
+				map[left - 11] = 'O';
+				map[left - 10] = 'O';
+				map[right + 1] = 'O';
+				map[right - 9] = 'O';
+				map[right - 10] = 'O';
 
-
-			   for (t=left+1; t<right; t++) {
-				   map[t-10]='O';
-				   mask[t-10]='O';
-			   }
-		   }
+				for (t = left + 1; t < right; t++) {
+					map[t - 10] = 'O';
+					mask[t - 10] = 'O';
+				}
+			}
 		}
 	}
 	print_matrix(START_POSITION, mask);
