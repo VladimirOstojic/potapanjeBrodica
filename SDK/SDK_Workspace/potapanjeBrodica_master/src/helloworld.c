@@ -48,29 +48,27 @@
  */
 #define IIC_DEVICE_ID		XPAR_IIC_0_DEVICE_ID
 #define INTC_DEVICE_ID		XPAR_INTC_0_DEVICE_ID
-#define IIC_INTR_ID		XPAR_INTC_0_IIC_0_VEC_ID
+#define IIC_INTR_ID			XPAR_INTC_0_IIC_0_VEC_ID
 
 /*
  * The following constant defines the address of the IIC device on the IIC bus.
  * Since the address is only 7 bits, this constant is the address divided by 2.
  */
 #define SLAVE_ADDRESS		0x70	/* 0xE0 as an 8 bit number. */
-
 #define RECEIVE_COUNT		25
-#define SEND_COUNT		25
-
-#define PAGE_SIZE   2
+#define SEND_COUNT			25
+#define PAGE_SIZE   		2
 
 typedef u8 AddressType;
 
-#define UP 	   0b00010000
-#define DOWN   0b00000001
-#define LEFT   0b00001000
-#define RIGHT  0b00000010
-#define CENTER 0b00000100
+#define UP 	   				0b00010000
+#define DOWN   				0b00000001
+#define LEFT   				0b00001000
+#define RIGHT  				0b00000010
+#define CENTER 				0b00000100
 
 //start positions of each matrix
-#define START_POSITION 1540
+#define START_POSITION 		1540
 #define START_POSITION_LEFT 1460
 
 /************************** Variable Definitions *****************************/
@@ -91,25 +89,31 @@ volatile struct {
 } HandlerInfo;
 
 typedef enum {
-	IDLE, LEFT_PRESSED, RIGHT_PRESSED, CENTER_PRESSED, DOWN_PRESSED, UP_PRESSED
+	IDLE, 
+	LEFT_PRESSED, 
+	RIGHT_PRESSED, 
+	CENTER_PRESSED, 
+	DOWN_PRESSED, 
+	UP_PRESSED
 } state_t;
 
 /************************** Function Prototypes ******************************/
 int initIICMaster(u16 IicDeviceId, u8 slaveAddress);
 int recvFromSlave(u8* slavePtr);
 int sendToSlave(u8 simbol);
+
 static int SetupInterruptSystem(XIic * IicInstPtr);
 static void StatusHandler(void *CallbackRef, int Status);
 static void SendHandler(void *CallbackRef, int ByteCount);
 static void RecvHandler(void *CallbackRef, int ByteCount);
 
-void print_matrix(int cursorPos, char c[]);
-state_t detect_keypress();
-int get_cursor_from_mem(int mem_location);
-int get_mem_loc_from_cursor(int cursor_pos);
-int move_cursor(int cursor, state_t key_pressed);
-void remove_edges(char* mask, char* map, int p);
-int len(char* string);
+void printMatrix(int cursorPos, char c[]);
+state_t detectKeyPress();
+int getCursorFromMemory(int memoryLocation);
+int getMemoryLocationFromCursor(int cursorPosition);
+int moveCursor(int cursor, state_t keyPressed);
+void removeEdges(char* mask, char* map, int p);
+
 // ----------------------------------------------------------------------------
 XIic IicInstance; /* The instance of the IIC device. */
 XIntc InterruptController; /* The instance of the Interrupt Controller */
@@ -123,150 +127,128 @@ volatile u8 TransmitComplete;
 volatile u8 ReceiveComplete;
 volatile u8 BusNotBusy;
 
-unsigned char string_s[] = "POTAPANJE BRODICA\n";
-unsigned char string_igrac[] = "IGRAC 1";
-unsigned char winner_s[] = "WINNER\n";
-unsigned char loser_s[] = "LOSER\n";
-unsigned char press_s[] = "PRITISNI SELECT";
+unsigned char stringGameName[] = "POTAPANJE BRODICA\n";
+unsigned char stringPlayer[] = "IGRAC 1";
+unsigned char stringWinner[] = "WINNER\n";
+unsigned char stringLoser[] = "LOSER\n";
+unsigned char stringPress[] = "PRITISNI SELECT";
 
 
 
 int main() {
 
 	state_t key = IDLE;
-	int completed_ships = 0;
+	int completedShips = 0;
 
 	int Status;
 	u8 slavePtr[2];
 
-	int i, frame_c = 0;
+	int i, frameCnt = 0;
 	int j;
-	int set_cursor_here = START_POSITION;
+	int setCursorHere = START_POSITION;
 
 	init_platform();
 
 	Status = initIICMaster(IIC_DEVICE_ID, SLAVE_ADDRESS);
+
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
 	}
 /*
 	while (key != CENTER_PRESSED) {
-		key = detect_keypress();
+		key = detectKeyPress();
 		set_cursor(2393);
 		for (j = 0; j < 1000000; j++) {}
-		frame_c++;
-		if (frame_c % 10 > 5) {
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, press_s, sizeof(press_s)/sizeof(char)-1);
+		frameCnt++;
+		if (frameCnt % 10 > 5) {
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, stringPress, sizeof(stringPress)/sizeof(char)-1);
 		} else {
 			clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 		}
 	}
 */
 	while (1) {
-		VGA_PERIPH_MEM_mWriteMemory(
-				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x00, 0x0); // direct mode   0
-		VGA_PERIPH_MEM_mWriteMemory(
-				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x04, 0x3); // display_mode  1
-		VGA_PERIPH_MEM_mWriteMemory(
-				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x08, 0x1); // show frame      2
-		VGA_PERIPH_MEM_mWriteMemory(
-				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x0C, 0x1); // font size       3
-		VGA_PERIPH_MEM_mWriteMemory(
-				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0xFFFFFF); // foreground 4
-		VGA_PERIPH_MEM_mWriteMemory(
-				XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0x0000FF); // background color 5
-		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x18, 0xFF0000); // frame color      6
+		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x00, 0x0); 		// direct mode   0
+		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x04, 0x3); 		// display_mode  1
+		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x08, 0x1); 		// show frame      2
+		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x0C, 0x1); 		// font size       3
+		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0xFFFFFF); 	// foreground 4
+		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0x0000FF); 	// background color 5
+		VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x18, 0xFF0000); 	// frame color      6
 
 		clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 		clear_graphics_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 
 		int random = rand() % 10;
-		char* master_map = all_maps[random];
+		char* masterMap = allMaps[random];
 
 		sendToSlave(random);
-		set_cursor(220);
 		set_cursor(368);
-		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s, 17);
+		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, stringGameName, 17);
 
 		set_cursor(4228);
-		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_igrac,
-				7);
+		print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, stringPlayer, 7);
 		recvFromSlave(slavePtr);
-		int slave_number = (int) slavePtr[0];
+		int slaveNumber = (int) slavePtr[0];
 		set_cursor(228);
-		char* slave_map = all_maps[slave_number];
-		int frame_cnt = 0;
-		char whitespace = ' ';
+		char* slaveMap = allMaps[slaveNumber];
+		int frameCounter = 0;
+		char whiteSpace = ' ';
 
-		print_matrix(START_POSITION_LEFT, master_map);
+		printMatrix(START_POSITION_LEFT, masterMap);
 
-		print_matrix(START_POSITION, mask);
+		printMatrix(START_POSITION, mask);
 
-		bool my_turn = true;
-		while (completed_ships < 20) {
-			while (my_turn) {
+		bool myTurn = true;
+		
+		while (completedShips < 20) {
+			while (myTurn) {
 				key = IDLE;
 				while (key != CENTER_PRESSED) {
-					key = detect_keypress();
+					key = detectKeyPress();
 					int j = 0;
 					for (j = 0; j < 1000000; j++) {
 					}
-					frame_cnt++;
-					set_cursor_here = move_cursor(set_cursor_here, key);
-					set_cursor(set_cursor_here);
-					if (frame_cnt % 10 < 5) {
-						print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-								whitespace);
+					frameCounter++;
+					setCursorHere = moveCursor(setCursorHere, key);
+					set_cursor(setCursorHere);
+					if (frameCounter % 10 < 5) {
+						print_char(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, whiteSpace);
 					} else {
-						print_matrix(START_POSITION, mask);
+						printMatrix(START_POSITION, mask);
 					}
 				}
 
-				int x = get_mem_loc_from_cursor(set_cursor_here);
+				int x = getMemoryLocationFromCursor(setCursorHere);
 
-				if (slave_map[x] == '0') {
+				if (slaveMap[x] == '0') {
 					mask[x] = 'O';
-					slave_map[x] = 'O';
-					my_turn = false;
+					slaveMap[x] = 'O';
+					myTurn = false;
 					sendToSlave('+');
-				} else if (slave_map[x] == '1') {
+				} else if (slaveMap[x] == '1') {
 
 					mask[x] = 'X';
-					slave_map[x] = 'X';
-					print_matrix(START_POSITION, mask);
-					remove_edges(mask, slave_map, x);
-					completed_ships++;
-					if (completed_ships == 20) {
+					slaveMap[x] = 'X';
+					printMatrix(START_POSITION, mask);
+					removeEdges(mask, slaveMap, x);
+					completedShips++;
+					if (completedShips == 20) {
 						sendToSlave('W');
 						while (1) {
 							set_cursor(555);
-							clear_text_screen(
-									XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
+							clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 							for (i = 0; i < 10; i++) {
 								if (i % 2 == 0) {
-									print_string(
-											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-											winner_s, 6);
-									VGA_PERIPH_MEM_mWriteMemory(
-											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
-											0x0000FF);			// foreground 4
-									VGA_PERIPH_MEM_mWriteMemory(
-											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
-											0xFFFFFF);	// background color 5
-									for (j = -2500000; j < 2500000; j++)
-										;
+									print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, stringWinner, 6);
+									VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0x0000FF);	// foreground 4
+									VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0xFFFFFF);	// background color 5
+									for (j = -2500000; j < 2500000; j++);
 								} else {
-									print_string(
-											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-											winner_s, 6);
-									VGA_PERIPH_MEM_mWriteMemory(
-											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10,
-											0xFFFFFF);			// foreground 4
-									VGA_PERIPH_MEM_mWriteMemory(
-											XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14,
-											0x0000FF);	// background color 5
-									for (j = -2500000; j < 2500000; j++)
-										;
+									print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,	stringWinner, 6);
+									VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x10, 0xFFFFFF);	// foreground 4
+									VGA_PERIPH_MEM_mWriteMemory(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR + 0x14, 0x0000FF);	// background color 5
+									for (j = -2500000; j < 2500000; j++);
 								}
 							}
 						}
@@ -275,29 +257,25 @@ int main() {
 				}
 			}
 			clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
-			print_matrix(START_POSITION, mask);
-			print_matrix(START_POSITION_LEFT, master_map);
+			printMatrix(START_POSITION, mask);
+			printMatrix(START_POSITION_LEFT, masterMap);
 			set_cursor(368);
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, string_s,
-					17);
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, stringGameName, 17);
 			set_cursor(4228);
-			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-					string_igrac, 7);
+			print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,	stringPlayer, 7);
 
 			u8 flag = 0;
 			while (flag != '+') {
 				recvFromSlave(&flag);
 				if (flag == 'W') {
-					clear_text_screen(
-							XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
+					clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 					set_cursor(556);
 					while (1) {
-						print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR,
-								loser_s, 8);
+						print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, stringLoser, 8);
 					}
 				}
 			}
-			my_turn = true;
+			myTurn = true;
 		}
 	}
 	return 0;
@@ -315,8 +293,7 @@ int initIICMaster(u16 IicDeviceId, u8 slaveAddress) {
 		return XST_FAILURE;
 	}
 
-	Status = XIic_CfgInitialize(&IicInstance, ConfigPtr,
-			ConfigPtr->BaseAddress);
+	Status = XIic_CfgInitialize(&IicInstance, ConfigPtr, ConfigPtr->BaseAddress);
 	if (Status != XST_SUCCESS) {
 		return XST_FAILURE;
 	}
@@ -538,8 +515,7 @@ static int SetupInterruptSystem(XIic * IicInstPtr) {
 	 * Register the interrupt controller handler with the exception table.
 	 */
 	Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT,
-			(Xil_ExceptionHandler) XIntc_InterruptHandler,
-			&InterruptController);
+			(Xil_ExceptionHandler) XIntc_InterruptHandler, &InterruptController);
 
 	/*
 	 * Enable non-critical exceptions.
@@ -549,7 +525,10 @@ static int SetupInterruptSystem(XIic * IicInstPtr) {
 	return XST_SUCCESS;
 }
 
-void print_matrix(int cursorPos, char c[]) {
+/*
+ * All functions below are explained in other helloworld.c file
+ */
+void printMatrix(int cursorPos, char c[]) {
 
 	int i = 0;
 	for (i = 0; i < 100; i++) {
@@ -565,7 +544,7 @@ void print_matrix(int cursorPos, char c[]) {
 	}
 }
 
-state_t detect_keypress() {
+state_t detectKeyPress() {
 	state_t state = IDLE;
 	int button = Xil_In32LE(XPAR_MY_PERIPHERAL_0_BASEADDR);
 	if ((button & UP) == 0) {
@@ -585,103 +564,83 @@ state_t detect_keypress() {
 	return state;
 }
 
-int get_cursor_from_mem(int mem_location) {
+int getCursorFromMemory(int memoryLocation) {
 	int cursor_x, cursor_y;
-	cursor_y = mem_location / 10;
-	cursor_x = mem_location % 10;
+	cursor_y = memoryLocation / 10;
+	cursor_x = memoryLocation % 10;
 	return START_POSITION + cursor_x * 4 + cursor_y * 160;
 }
 
-int get_mem_loc_from_cursor(int cursor_pos) {
+int getMemoryLocationFromCursor(int cursorPosition) {
 	int mem_x, mem_y;
-	cursor_pos -= START_POSITION;
-	mem_y = cursor_pos / 160;
-	mem_x = cursor_pos % 40 / 4;
+	cursorPosition -= START_POSITION;
+	mem_y = cursorPosition / 160;
+	mem_x = cursorPosition % 40 / 4;
 	return mem_y * 10 + mem_x;
 }
 
-int move_cursor(int cursor, state_t key_pressed) {
-	bool right_edge, left_edge, up_edge, down_edge;
+int moveCursor(int cursor, state_t keyPressed) {
+	bool rightEdge, leftEdge, upEdge, downEdge;
 
-	int pos = get_mem_loc_from_cursor(cursor);
+	int pos = getMemoryLocationFromCursor(cursor);
 
-	left_edge = (pos % 10 == 0) ? true : false;
-	right_edge = (pos % 10 == 9) ? true : false;
-	down_edge = (pos >= 90) ? true : false;
-	up_edge = (pos <= 9) ? true : false;
+	leftEdge = (pos % 10 == 0) ? true : false;
+	rightEdge = (pos % 10 == 9) ? true : false;
+	downEdge = (pos >= 90) ? true : false;
+	upEdge = (pos <= 9) ? true : false;
 
-	if (key_pressed == LEFT_PRESSED)
-		pos = (left_edge) ? pos : pos - 1;
-	else if (key_pressed == RIGHT_PRESSED)
-		pos = (right_edge) ? pos : pos + 1;
-	else if (key_pressed == UP_PRESSED)
-		pos = (up_edge) ? pos : pos - 10;
-	else if (key_pressed == DOWN_PRESSED)
-		pos = (down_edge) ? pos : pos + 10;
-	else if (key_pressed == CENTER_PRESSED)
+	if (keyPressed == LEFT_PRESSED)
+		pos = (leftEdge) ? pos : pos - 1;
+	else if (keyPressed == RIGHT_PRESSED)
+		pos = (rightEdge) ? pos : pos + 1;
+	else if (keyPressed == UP_PRESSED)
+		pos = (upEdge) ? pos : pos - 10;
+	else if (keyPressed == DOWN_PRESSED)
+		pos = (downEdge) ? pos : pos + 10;
+	else if (keyPressed == CENTER_PRESSED)
 		pos = pos;
 
-	return get_cursor_from_mem(pos);
+	return getCursorFromMemory(pos);
 }
 
-void remove_edges(char* mask, char* map, int p) {
+void removeEdges(char* mask, char* map, int p) {
 
 	bool horizontal, vertical, single;
-	bool right_edge, left_edge, up_edge, down_edge;
-	bool left_up, left_down, right_down, right_up;
+	bool rightEdge, leftEdge, upEdge, downEdge;
+	bool leftUp, leftDown, rightDown, rightUp;
 	int upper, down, left, right;
 
-	left_edge = (p % 10 == 0) ? true : false;
-	right_edge = (p % 10 == 9) ? true : false;
-	down_edge = (p > 90) ? true : false;
-	up_edge = (p <= 9) ? true : false;
+	leftEdge = (p % 10 == 0) ? true : false;
+	rightEdge = (p % 10 == 9) ? true : false;
+	downEdge = (p > 90) ? true : false;
+	upEdge = (p <= 9) ? true : false;
 
-	left_up = left_edge && up_edge;
-	left_down = left_edge && down_edge;
-	right_down = right_edge && down_edge;
-	right_up = right_edge && up_edge;
+	leftUp = leftEdge && upEdge;
+	leftDown = leftEdge && downEdge;
+	rightDown = rightEdge && downEdge;
+	rightUp = rightEdge && upEdge;
 
-	if (up_edge) {
-		vertical =
-				((map[p] == '1' || map[p] == 'X')
-						&& (map[p + 10] == '1' || map[p + 10] == 'X')) ?
-						true : false;
-	} else if (down_edge) {
-		vertical =
-				((map[p] == '1' || map[p] == 'X')
-						&& (map[p - 10] == '1' || map[p - 10] == 'X')) ?
-						true : false;
-	} else if (!(up_edge || down_edge)) {
-		vertical =
-				((map[p] == '1' || map[p] == 'X')
-						&& ((map[p + 10] == '1' || map[p + 10] == 'X')
-								|| (map[p - 10] == '1' || map[p - 10] == 'X'))) ?
-						true : false;
+	if (upEdge) {
+		vertical =((map[p] == '1' || map[p] == 'X')	&& (map[p + 10] == '1' || map[p + 10] == 'X')) ? true : false;
+	} else if (downEdge) {
+		vertical =((map[p] == '1' || map[p] == 'X') && (map[p - 10] == '1' || map[p - 10] == 'X')) ? true : false;
+	} else if (!(upEdge || downEdge)) {
+		vertical =((map[p] == '1' || map[p] == 'X') && ((map[p + 10] == '1' || map[p + 10] == 'X') || (map[p - 10] == '1' || map[p - 10] == 'X'))) ? true : false;
 	}
 
-	if (left_edge) {
-		horizontal =
-				((map[p] == '1' || map[p] == 'X')
-						&& (map[p + 1] == '1' || map[p + 1] == 'X')) ?
-						true : false;
-	} else if (right_edge) {
-		horizontal =
-				((map[p] == '1' || map[p] == 'X')
-						&& (map[p - 1] == '1' || map[p - 1] == 'X')) ?
-						true : false;
-	} else if (!(left_edge || right_edge)) {
-		horizontal =
-				((map[p] == '1' || map[p] == 'X')
-						&& ((map[p + 1] == '1' || map[p + 1] == 'X')
-								|| (map[p - 1] == '1' || map[p - 1] == 'X'))) ?
-						true : false;
+	if (leftEdge) {
+		horizontal =((map[p] == '1' || map[p] == 'X') && (map[p + 1] == '1' || map[p + 1] == 'X')) ? true : false;
+	} else if (rightEdge) {
+		horizontal =((map[p] == '1' || map[p] == 'X') && (map[p - 1] == '1' || map[p - 1] == 'X')) ? true : false;
+	} else if (!(leftEdge || rightEdge)) {
+		horizontal =((map[p] == '1' || map[p] == 'X') && ((map[p + 1] == '1' || map[p + 1] == 'X') || (map[p - 1] == '1' || map[p - 1] == 'X'))) ? true : false;
 	}
 
 	single = (!horizontal) && (!vertical);
 	int temp = p;
 
 	if (horizontal || single) {
-		if (!right_edge) {
+		if (!rightEdge) {
 			while (map[temp] == '1' || map[temp] == 'X') {
 				right = temp;
 				temp += 1;
@@ -690,7 +649,7 @@ void remove_edges(char* mask, char* map, int p) {
 			right = temp;
 		}
 		temp = p;
-		if (!left_edge) {
+		if (!leftEdge) {
 			while (map[temp] == '1' || map[temp] == 'X') {
 				left = temp;
 				temp -= 1;
@@ -702,7 +661,7 @@ void remove_edges(char* mask, char* map, int p) {
 
 	temp = p;
 	if (vertical) {
-		if (!down_edge) {
+		if (!downEdge) {
 			while (map[temp] == '1' || map[temp] == 'X') {
 				upper = temp;
 				temp -= 10;
@@ -712,7 +671,7 @@ void remove_edges(char* mask, char* map, int p) {
 		}
 
 		temp = p;
-		if (!up_edge) {
+		if (!upEdge) {
 			while (map[temp] == '1' || map[temp] == 'X') {
 				down = temp;
 				temp += 10;
@@ -734,18 +693,18 @@ void remove_edges(char* mask, char* map, int p) {
 			}
 		}
 
-		left_edge = (upper % 10 == 0) ? true : false;
-		right_edge = (upper % 10 == 9) ? true : false;
-		down_edge = (down > 90) ? true : false;
-		up_edge = (upper <= 9) ? true : false;
+		leftEdge = (upper % 10 == 0) ? true : false;
+		rightEdge = (upper % 10 == 9) ? true : false;
+		downEdge = (down > 90) ? true : false;
+		upEdge = (upper <= 9) ? true : false;
 
-		left_up = left_edge && up_edge;
-		left_down = left_edge && down_edge;
-		right_down = right_edge && down_edge;
-		right_up = right_edge && up_edge;
+		leftUp = leftEdge && upEdge;
+		leftDown = leftEdge && downEdge;
+		rightDown = rightEdge && downEdge;
+		rightUp = rightEdge && upEdge;
 
 		if (completed) {
-			if (!up_edge && !left_edge && !right_edge && !down_edge) {
+			if (!upEdge && !leftEdge && !rightEdge && !downEdge) {
 				map[upper - 1] = 'O';
 				map[upper - 11] = 'O';
 				map[upper - 10] = 'O';
@@ -775,7 +734,7 @@ void remove_edges(char* mask, char* map, int p) {
 					map[t - 1] = 'O';
 				}
 			}
-			if (left_up) {
+			if (leftUp) {
 				map[upper + 1] = 'O';
 				map[down + 1] = 'O';
 				map[down + 10] = 'O';
@@ -791,7 +750,7 @@ void remove_edges(char* mask, char* map, int p) {
 					map[t + 1] = 'O';
 				}
 			}
-			if (right_up) {
+			if (rightUp) {
 				map[upper - 1] = 'O';
 				map[down + 10] = 'O';
 				map[down + 9] = 'O';
@@ -807,7 +766,7 @@ void remove_edges(char* mask, char* map, int p) {
 					map[t - 1] = 'O';
 				}
 			}
-			if (left_down) {
+			if (leftDown) {
 				map[upper - 10] = 'O';
 				map[upper - 9] = 'O';
 				map[upper + 1] = 'O';
@@ -823,7 +782,7 @@ void remove_edges(char* mask, char* map, int p) {
 					map[t + 1] = 'O';
 				}
 			}
-			if (right_down) {
+			if (rightDown) {
 				mask[upper - 11] = 'O';
 				mask[upper - 10] = 'O';
 				mask[upper - 1] = 'O';
@@ -839,7 +798,7 @@ void remove_edges(char* mask, char* map, int p) {
 					map[t - 1] = 'O';
 				}
 			}
-			if (left_edge && !up_edge && !down_edge) {
+			if (leftEdge && !upEdge && !downEdge) {
 				map[upper + 1] = 'O';
 				map[upper - 10] = 'O';
 				map[upper - 9] = 'O';
@@ -859,7 +818,7 @@ void remove_edges(char* mask, char* map, int p) {
 					mask[t + 1] = 'O';
 				}
 			}
-			if (right_edge && !up_edge && !down_edge) {
+			if (rightEdge && !upEdge && !downEdge) {
 				map[upper - 1] = 'O';
 				map[upper - 11] = 'O';
 				map[upper - 10] = 'O';
@@ -879,7 +838,7 @@ void remove_edges(char* mask, char* map, int p) {
 					map[t - 1] = 'O';
 				}
 			}
-			if (up_edge && !right_edge && !left_edge) {
+			if (upEdge && !rightEdge && !leftEdge) {
 				map[upper + 1] = 'O';
 				map[upper - 1] = 'O';
 				map[down + 1] = 'O';
@@ -904,7 +863,7 @@ void remove_edges(char* mask, char* map, int p) {
 					mask[t - 1] = 'O';
 				}
 			}
-			if (down_edge && !left_edge && !right_edge) {
+			if (downEdge && !leftEdge && !rightEdge) {
 				map[upper + 1] = 'O';
 				map[upper - 1] = 'O';
 				map[upper - 9] = 'O';
@@ -941,17 +900,17 @@ void remove_edges(char* mask, char* map, int p) {
 		}
 
 		if (completed) {
-			left_edge = (left % 10 == 0) ? true : false;
-			right_edge = (right % 10 == 9) ? true : false;
-			down_edge = (left > 90) ? true : false;
-			up_edge = (left <= 9) ? true : false;
+			leftEdge = (left % 10 == 0) ? true : false;
+			rightEdge = (right % 10 == 9) ? true : false;
+			downEdge = (left > 90) ? true : false;
+			upEdge = (left <= 9) ? true : false;
 
-			left_up = left_edge && up_edge;
-			left_down = left_edge && down_edge;
-			right_down = right_edge && down_edge;
-			right_up = right_edge && up_edge;
+			leftUp = leftEdge && upEdge;
+			leftDown = leftEdge && downEdge;
+			rightDown = rightEdge && downEdge;
+			rightUp = rightEdge && upEdge;
 
-			if (!up_edge && !left_edge && !right_edge && !down_edge) {
+			if (!upEdge && !leftEdge && !rightEdge && !downEdge) {
 				map[left - 1] = 'O';
 				map[left - 11] = 'O';
 				map[left - 10] = 'O';
@@ -982,7 +941,7 @@ void remove_edges(char* mask, char* map, int p) {
 					mask[t - 10] = 'O';
 				}
 			}
-			if (left_up) {
+			if (leftUp) {
 				map[right + 1] = 'O';
 				map[right + 10] = 'O';
 				map[right + 11] = 'O';
@@ -999,7 +958,7 @@ void remove_edges(char* mask, char* map, int p) {
 				}
 			}
 
-			if (right_up) {
+			if (rightUp) {
 				map[left - 1] = 'O';
 				map[left + 10] = 'O';
 				map[left + 9] = 'O';
@@ -1016,7 +975,7 @@ void remove_edges(char* mask, char* map, int p) {
 				}
 			}
 
-			if (left_down) {
+			if (leftDown) {
 				map[right - 10] = 'O';
 				map[right - 9] = 'O';
 				map[right + 1] = 'O';
@@ -1032,7 +991,7 @@ void remove_edges(char* mask, char* map, int p) {
 					mask[t - 10] = 'O';
 				}
 			}
-			if (right_down) {
+			if (rightDown) {
 				map[left - 11] = 'O';
 				map[left - 10] = 'O';
 				map[left - 1] = 'O';
@@ -1049,7 +1008,7 @@ void remove_edges(char* mask, char* map, int p) {
 				}
 
 			}
-			if (left_edge && !up_edge && !down_edge) {
+			if (leftEdge && !upEdge && !downEdge) {
 				map[left - 10] = 'O';
 				map[left + 10] = 'O';
 				map[right - 10] = 'O';
@@ -1074,7 +1033,7 @@ void remove_edges(char* mask, char* map, int p) {
 					map[t - 10] = 'O';
 				}
 			}
-			if (right_edge && !up_edge && !down_edge) {
+			if (rightEdge && !upEdge && !downEdge) {
 				map[left - 1] = 'O';
 				map[left + 9] = 'O';
 				map[left - 11] = 'O';
@@ -1099,7 +1058,7 @@ void remove_edges(char* mask, char* map, int p) {
 					mask[t - 10] = 'O';
 				}
 			}
-			if (up_edge && !right_edge && !left_edge) {
+			if (upEdge && !rightEdge && !leftEdge) {
 				map[left - 1] = 'O';
 				map[left + 9] = 'O';
 				map[left + 10] = 'O';
@@ -1119,7 +1078,7 @@ void remove_edges(char* mask, char* map, int p) {
 					map[t + 10] = 'O';
 				}
 			}
-			if (down_edge && !left_edge && !right_edge) {
+			if (downEdge && !leftEdge && !rightEdge) {
 				mask[left - 1] = 'O';
 				mask[left - 11] = 'O';
 				mask[left - 10] = 'O';
@@ -1141,6 +1100,6 @@ void remove_edges(char* mask, char* map, int p) {
 			}
 		}
 	}
-	print_matrix(START_POSITION, mask);
+	printMatrix(START_POSITION, mask);
 }
 

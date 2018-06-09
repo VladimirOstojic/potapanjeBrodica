@@ -160,6 +160,6 @@ char map9[100] = {
 	'0','0','0','1','1','1','1','0','0','0'
 };
 
-char* all_maps[] = {map0, map1, map2, map3, map4, map5, map6, map7, map8, map9};
+char* allMaps[] = {map0, map1, map2, map3, map4, map5, map6, map7, map8, map9};
 
 #endif // MAPS_H_INCLUDED

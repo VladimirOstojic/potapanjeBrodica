@@ -159,36 +159,8 @@ char map9[100] = {
 	'0','1','0','0','0','0','0','0','0','0',
 	'0','0','0','1','1','1','1','0','0','0'
 };
-char* all_maps[] = {map0, map1, map2, map3, map4,map5,map6,map7,map8,map9};
 
-//char* map() {
-//
-//	int random = rand() % 10;
-//
-//    switch(random) {
-//		case 0:
-//			return map0;
-//		case 1:
-//			return map1;
-//		case 2:
-//			return map2;
-//		case 3:
-//			return map3;
-//		case 4:
-//			return map4;
-//		case 5:
-//			return map5;
-//		case 6:
-//			return map6;
-//		case 7:
-//			return map7;
-//		case 8:
-//			return map8;
-//		case 9:
-//			return map9;
-//		default:
-//			return c;
-//	}
-//};
+char* allMaps[] = {map0, map1, map2, map3, map4, map5, map6, map7, map8, map9};
+
 
 #endif // MAPS_H_INCLUDED
