@@ -129,8 +129,8 @@ volatile u8 BusNotBusy;
 
 unsigned char stringGameName[] = "POTAPANJE BRODICA\n";
 unsigned char stringPlayer[] = "IGRAC 1";
-unsigned char stringWinner[] = "WINNER\n";
-unsigned char stringLoser[] = "LOSER\n";
+unsigned char stringWinner[] = "WINNER";
+unsigned char stringLoser[] = "LOSER";
 unsigned char stringPress[] = "PRITISNI SELECT";
 
 
@@ -271,7 +271,7 @@ int main() {
 					clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 					set_cursor(556);
 					while (1) {
-						print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, stringLoser, 8);
+						print_string(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR, stringLoser, sizeof(stringLoser) / sizeof(char) - 1);
 					}
 				}
 			}

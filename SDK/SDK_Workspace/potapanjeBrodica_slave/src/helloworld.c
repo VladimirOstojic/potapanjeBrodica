@@ -201,7 +201,8 @@ int main() {
 					removeEdges(mask, masterMap, x);
 					completedShips++;
 					if (completedShips == 20) {
-						while (detectKeyPress()!=IDLE) {
+						SlaveWriteData('W');
+						while (1) {
 							set_cursor(555);
 							clear_text_screen(XPAR_VGA_PERIPH_MEM_0_S_AXI_MEM0_BASEADDR);
 							for (i = 0; i < 10; i++) {
