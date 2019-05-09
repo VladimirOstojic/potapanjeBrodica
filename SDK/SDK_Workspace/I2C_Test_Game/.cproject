@@ -94,7 +94,7 @@
 							</tool>
 							<tool id="xilinx.gnu.mb.size.debug.621306974" name="MicroBlaze Print Size" superClass="xilinx.gnu.mb.size.debug"/>
 							<tool id="xilinx.elfcheck.mb.debug.546190574" name="Xilinx ELF Check" superClass="xilinx.elfcheck.mb.debug">
-								<option id="xilinx.elfcheck.option.hwspec.1360310188" superClass="xilinx.elfcheck.option.hwspec" value="-hw ../../I2C_on_E2LP_hw_platform/system.xml" valueType="string"/>
+								<option id="xilinx.elfcheck.option.hwspec.1360310188" superClass="xilinx.elfcheck.option.hwspec" value="-hw ../../potapanjeBrodica_hw_platform/system.xml" valueType="string"/>
 								<option id="xilinx.elfcheck.option.procname.526898899" superClass="xilinx.elfcheck.option.procname" value="-pe microblaze_0" valueType="string"/>
 							</tool>
 						</toolChain>
@@ -186,7 +186,7 @@
 							</tool>
 							<tool id="xilinx.gnu.mb.size.release.1736518590" name="MicroBlaze Print Size" superClass="xilinx.gnu.mb.size.release"/>
 							<tool id="xilinx.elfcheck.mb.release.1194891952" name="Xilinx ELF Check" superClass="xilinx.elfcheck.mb.release">
-								<option id="xilinx.elfcheck.option.hwspec.906650596" superClass="xilinx.elfcheck.option.hwspec" value="-hw ../../I2C_on_E2LP_hw_platform/system.xml" valueType="string"/>
+								<option id="xilinx.elfcheck.option.hwspec.906650596" superClass="xilinx.elfcheck.option.hwspec" value="-hw ../../potapanjeBrodica_hw_platform/system.xml" valueType="string"/>
 								<option id="xilinx.elfcheck.option.procname.2006683812" superClass="xilinx.elfcheck.option.procname" value="-pe microblaze_0" valueType="string"/>
 							</tool>
 						</toolChain>
