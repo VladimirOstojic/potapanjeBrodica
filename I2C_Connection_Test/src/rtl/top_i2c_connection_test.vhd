@@ -4,16 +4,16 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-entity Sega_Gun_Test is
+entity top_i2c_connection_test is
 	port(
 		i_sw     		: in  std_logic_vector(1 downto 0);
 		o_I2C_SCL		: in  std_logic;
 		o_led    		: out std_logic_vector(1 downto 0);
 		o_I2C_SDA    	: out std_logic
 	);
-end entity Sega_Gun_Test;
+end entity top_i2c_connection_test;
 
-architecture arch_hamming_top of Sega_Gun_Test is
+architecture arch_hamming_top of top_i2c_connection_test is
 
 	signal s_swr			: std_logic;
 
