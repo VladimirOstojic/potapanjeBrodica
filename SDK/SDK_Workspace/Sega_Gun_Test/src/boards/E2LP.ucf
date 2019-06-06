@@ -5,6 +5,7 @@
 #
 #NET in_reset LOC = "AE24"  |  IOSTANDARD = "LVCMOS33"  |  TIG;
 
+#m m
 
 NET i_sw[0] LOC = "W19" | IOSTANDARD = "LVCMOS33";
 #NET i_sw[1] LOC = "Y24" | IOSTANDARD = "LVCMOS33";
