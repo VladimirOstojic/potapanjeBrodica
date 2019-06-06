@@ -7,9 +7,9 @@ use ieee.std_logic_1164.all;
 entity top_i2c_connection_test is
 	port(
 		i_sw     		: in  std_logic_vector(1 downto 0);
-		o_I2C_SCL		: in  std_logic;
+		o_i2c_scl		: in  std_logic;
 		o_led    		: out std_logic_vector(1 downto 0);
-		o_I2C_SDA    	: out std_logic
+		o_i2c_sda    	: out std_logic
 	);
 end entity top_i2c_connection_test;
 
@@ -20,21 +20,12 @@ architecture arch_hamming_top of top_i2c_connection_test is
 begin
 	-- Encoder instance.
 	
-	i_sw(0) <= o_led(0) and o_I2C_SCL;
+	i_sw(0) <= o_led(0) and o_i2c_scl;
 	
-	i_sw(1) <= o_led(1) and o_I2C_SDA;
+	i_sw(1) <= o_led(1) and o_i2c_sda;
 	
-	
-	
-	
-	s_swr<= in_btn(0) and i_sw(0);
 	
 	o_led(0)<= s_swr;
-	
-	o_pwr <= s_swr;
-	
-	o_led(1)<= i_sig;
-	
 	
 	
 	-- Decoder instance.
