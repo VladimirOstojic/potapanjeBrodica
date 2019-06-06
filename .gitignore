@@ -30,9 +30,9 @@ XpsGuiSessionLock
 *.a
 Debug/
 Release/
-#.metadata/
-#/SDK/SDK_Workspace/*_hw_platform/
-#/SDK/SDK_Workspace/*_bsp/
+.metadata/
+/SDK/SDK_Workspace/*_hw_platform/
+/SDK/SDK_Workspace/*_bsp/
 #/SDK/SDK_Export/
 
 # ISE
@@ -76,6 +76,7 @@ xst/
 *.xml
 _ngo/
 *.bgn
+*.bit
 *.bld
 *.drc
 *.ngc
@@ -104,4 +105,4 @@ _ngo/
 *_xst.xrpt
 xlnx_auto_0_xdb/
 
-!char_rom_def.ngc
+!demos/*/*.bit
