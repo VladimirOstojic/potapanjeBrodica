@@ -1,0 +1,8 @@
+INTSTYLE=ise
+INFILE=C:\Users\student\Downloads\Stoljpi_za_duck_hunt-master\Stoljpi_za_duck_hunt-master\Sega_Gun_Test\Sega_Gun_Test.ncd
+OUTFILE=C:\Users\student\Downloads\Stoljpi_za_duck_hunt-master\Stoljpi_za_duck_hunt-master\Sega_Gun_Test\Sega_Gun_Test.bit
+FAMILY=Spartan6
+PART=xc6slx45-2fgg676
+WORKINGDIR=C:\Users\student\Downloads\Stoljpi_za_duck_hunt-master\Stoljpi_za_duck_hunt-master\Sega_Gun_Test
+LICENSE=ISE
+USER_INFO=209858334_178080923_210593072_769
