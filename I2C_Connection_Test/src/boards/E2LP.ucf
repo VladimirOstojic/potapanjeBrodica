@@ -6,7 +6,7 @@
 
 
 NET i_sw[0] LOC = "W19" | IOSTANDARD = "LVCMOS33";
-#NET i_sw[1] LOC = "Y24" | IOSTANDARD = "LVCMOS33";
+NET i_sw[1] LOC = "Y24" | IOSTANDARD = "LVCMOS33";
 #NET i_sw[2] LOC = "K19" | IOSTANDARD = "LVCMOS33";
 #NET i_sw[3] LOC = "V24" | IOSTANDARD = "LVCMOS33";
 #NET i_sw[4] LOC = "U20" | IOSTANDARD = "LVCMOS33";
@@ -14,7 +14,7 @@ NET i_sw[0] LOC = "W19" | IOSTANDARD = "LVCMOS33";
 #NET i_sw[6] LOC = "U24" | IOSTANDARD = "LVCMOS33";
 #NET i_sw[7] LOC = "U19" | IOSTANDARD = "LVCMOS33";
 
-NET in_btn[0] LOC = "AA23" | IOSTANDARD = "LVCMOS33"; # Up
+#NET in_btn[0] LOC = "AA23" | IOSTANDARD = "LVCMOS33"; # Up
 #NET in_btn[1] LOC = "AC23" | IOSTANDARD = "LVCMOS33"; # Left
 #NET in_btn[2] LOC = "AB24" | IOSTANDARD = "LVCMOS33"; # Middle
 #NET in_btn[3] LOC = "AA24" | IOSTANDARD = "LVCMOS33"; # Right
@@ -29,5 +29,5 @@ NET o_led[1] LOC = "N23"  |  IOSTANDARD = "LVCMOS33";
 #NET o_led[6] LOC = "H24"  |  IOSTANDARD = "LVCMOS33";
 #NET o_led[7] LOC = "D24"  |  IOSTANDARD = "LVCMOS33";
 
-NET o_pwr   LOC = "C5"  |  IOSTANDARD = "LVCMOS33"; # SNAPW_0
-NET i_sig	LOC = "C6"	| IOSTANDARD = "LVCMOS33";	# SNAPW_1
+NET o_i2c_scl   LOC = "C5"  |  IOSTANDARD = "LVCMOS33"; # SNAPW_0
+NET o_i2c_sda	LOC = "C6"	| IOSTANDARD = "LVCMOS33";	# SNAPW_1
