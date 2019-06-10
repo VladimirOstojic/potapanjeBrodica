@@ -29,5 +29,5 @@ NET o_led[1] LOC = "N23"  |  IOSTANDARD = "LVCMOS33";
 #NET o_led[6] LOC = "H24"  |  IOSTANDARD = "LVCMOS33";
 #NET o_led[7] LOC = "D24"  |  IOSTANDARD = "LVCMOS33";
 
-NET o_i2c_scl   LOC = "C5"  |  IOSTANDARD = "LVCMOS33"; # SNAPW_0
-NET o_i2c_sda	LOC = "C6"	| IOSTANDARD = "LVCMOS33";	# SNAPW_1
+NET io_i2c_scl   LOC = "C5"  |  IOSTANDARD = "LVCMOS33"; # SNAPW_0
+NET io_i2c_sda	LOC = "C6"	| IOSTANDARD = "LVCMOS33";	# SNAPW_1
